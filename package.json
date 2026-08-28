@@ -1,0 +1,11 @@
+{
+  "name": "huadian-quiz-app",
+  "version": "1.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 8080 --directory app",
+    "embed-banks": "python3 scripts/embed_banks.py",
+    "test": "node tests/app.test.mjs"
+  }
+}

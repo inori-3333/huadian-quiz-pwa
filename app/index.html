@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#15382f">
+  <meta name="description" content="为 iPad 优化的华电安规离线刷题应用">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="华电刷题">
+  <title>华电刷题</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header id="topbar" class="topbar">
+    <button id="back-button" class="icon-button hidden" type="button" aria-label="返回">‹</button>
+    <div class="brand">
+      <span class="brand-mark">✓</span>
+      <div><strong id="page-title">华电刷题</strong><small id="page-subtitle" class="hidden"></small></div>
+    </div>
+    <span id="connection-status" class="connection-status hidden" aria-live="polite">离线可用</span>
+    <button id="install-button" class="install-button hidden" type="button">安装到 iPad</button>
+    <button id="bank-switch" class="bank-switch hidden" type="button">切换题库</button>
+  </header>
+
+  <main id="app" aria-live="polite">
+    <div class="loading"><span class="spinner"></span><p>正在加载题库…</p></div>
+  </main>
+
+  <nav id="bottom-nav" class="bottom-nav hidden" aria-label="主导航">
+    <button data-nav="dashboard" type="button"><span>⌂</span>主页</button>
+    <button data-nav="library" type="button"><span>☷</span>题库</button>
+    <button data-nav="wrong" type="button"><span>×</span>错题</button>
+    <button data-nav="favorite" type="button"><span>★</span>收藏</button>
+  </nav>
+
+  <div id="toast" class="toast" role="status"></div>
+  <div id="modal-root"></div>
+  <script src="banks-data.js"></script>
+  <script src="core.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

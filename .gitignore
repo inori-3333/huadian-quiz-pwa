@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+Thumbs.db
+android-app/.gradle/
+android-app/app/build/
+outputs/
+output/playwright/
+.playwright-cli/
