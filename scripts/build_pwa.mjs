@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('../', import.meta.url))
 const app = path.join(root, 'app')
 const output = path.join(root, 'dist')
 const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
-const files = ['index.html', 'styles.css', 'core.js', 'main.js', 'pwa.js', 'banks-data.js', 'regulations-data.js', 'manifest.webmanifest', 'assets/icon.svg', 'assets/icon.png', 'assets/icon-192.png']
+const files = ['index.html', 'styles.css', 'core.js', 'exam.js', 'main.js', 'pwa.js', 'banks-data.js', 'regulations-data.js', 'manifest.webmanifest', 'assets/icon.svg', 'assets/icon.png', 'assets/icon-192.png']
 const hash = createHash('sha256')
 const payloads = files.map(file => {
   let data = fs.readFileSync(path.join(app, file))

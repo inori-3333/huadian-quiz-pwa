@@ -26,6 +26,7 @@ const stored = loadStoredState()
 const progress = stored.progress || {}
 const edits = stored.edits || {}
 const resumeSessions = stored.resumeSessions || {}
+const examSessions = stored.examSessions || {}
 let swipeGuideDismissed = stored.swipeGuideDismissed === true
 let currentBankId = stored.currentBankId || null
 
@@ -39,7 +40,7 @@ function loadStoredState() {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, swipeGuideDismissed }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, swipeGuideDismissed }))
     return true
   } catch {
     if (!storageWarningShown) showToast('浏览器无法保存进度，请允许本站使用本地存储')
@@ -206,6 +207,10 @@ function render() {
   else if (currentView === 'dashboard') renderDashboard()
   else if (['library', 'wrong', 'favorite'].includes(currentView)) renderList(currentView)
   else if (currentView === 'practice') renderPractice()
+  else if (currentView === 'exam-setup') renderExamSetup()
+  else if (currentView === 'exam') renderExam()
+  else if (currentView === 'exam-result') renderExamResult()
+  else if (currentView === 'exam-review') renderExamReview()
 }
 
 function renderHome() {
@@ -251,6 +256,7 @@ function renderDashboard() {
     </section>
     <section class="action-grid">
       ${savedSession ? '<button class="action-card continue" data-action="continue"><span class="action-icon">▶</span><strong>继续刷题</strong></button>' : ''}
+      ${bank.id !== 'youththeory2' ? '<button class="action-card" data-action="exam"><span class="action-icon">▤</span><strong>模拟安规考试</strong></button>' : ''}
       <button class="action-card" data-action="sequence"><span class="action-icon">→</span><strong>顺序刷题</strong></button>
       <button class="action-card" data-action="start-at"><span class="action-icon">#</span><strong>指定题号</strong></button>
       <button class="action-card" data-action="by-type"><span class="action-icon">≡</span><strong>题型刷题</strong></button>
@@ -259,6 +265,7 @@ function renderDashboard() {
       <button class="action-card" data-action="favorite"><span class="action-icon">★</span><strong>收藏练习</strong></button>
     </section>`
   app.querySelector('[data-action="continue"]')?.addEventListener('click', continueSession)
+  app.querySelector('[data-action="exam"]')?.addEventListener('click', () => navigate('exam-setup'))
   app.querySelector('[data-action="sequence"]').addEventListener('click', () => startSession(questionsForBank().map(q => q.id), '顺序刷题'))
   app.querySelector('[data-action="start-at"]').addEventListener('click', openStartPicker)
   app.querySelector('[data-action="by-type"]').addEventListener('click', openTypePicker)
@@ -785,6 +792,7 @@ app.addEventListener('click', event => {
 }, true)
 
 backButton.addEventListener('click', () => {
+  if (currentView.startsWith('exam')) return leaveExamView()
   if (currentView === 'practice') {
     if (Number.isInteger(session?.reviewIndex)) return returnToCurrentQuestion()
     session = null

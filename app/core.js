@@ -86,6 +86,48 @@ function shuffled(items, random = Math.random) {
   return result
 }
 
+const EXAM_SECTIONS = Object.freeze([
+  Object.freeze({ type: 'single', title: '第一部分 · 单选题', count: 25, points: 1 }),
+  Object.freeze({ type: 'fill', title: '第二部分 · 填空题', count: 20, points: 2 }),
+  Object.freeze({ type: 'judge', title: '第三部分 · 判断题', count: 20, points: 1 })
+])
+
+function examQuestionPools(questions) {
+  const unique = [...new Map(questions.map(question => [question.id, question])).values()]
+  return EXAM_SECTIONS.map(section => ({ ...section, questions: unique.filter(question => question.type === section.type) }))
+}
+
+function createExamPaper(questions, random = Math.random) {
+  const pools = examQuestionPools(questions)
+  if (pools.some(pool => pool.questions.length < pool.count)) throw new Error('题库题量不足，无法组成完整试卷')
+  // Freeze the paper's content in a snapshot so later bank edits cannot change
+  // an unfinished exam's marking or a completed exam's answer review.
+  return pools.flatMap(pool => shuffled(pool.questions, random).slice(0, pool.count).map(question => ({
+    ...question, options: (question.options || []).map(option => ({ ...option }))
+  })))
+}
+
+function gradeExamPaper(questions, answers) {
+  const results = questions.map((question, index) => {
+    const userAnswer = String(answers[index] ?? '')
+    const unanswered = !userAnswer.trim()
+    const correct = !unanswered && isCorrectAnswer(question, userAnswer)
+    const points = EXAM_SECTIONS.find(section => section.type === question.type).points
+    return { id: question.id, index, userAnswer, correct, unanswered, points, score: correct ? points : 0 }
+  })
+  const sections = EXAM_SECTIONS.map(section => {
+    const entries = results.filter(result => questions[result.index].type === section.type)
+    return { ...section, score: entries.reduce((sum, result) => sum + result.score, 0), correct: entries.filter(result => result.correct).length }
+  })
+  const correct = results.filter(result => result.correct).length
+  return {
+    results, sections, correct, wrong: results.length - correct,
+    unanswered: results.filter(result => result.unanswered).length,
+    score: results.reduce((sum, result) => sum + result.score, 0),
+    totalScore: EXAM_SECTIONS.reduce((sum, section) => sum + section.count * section.points, 0)
+  }
+}
+
 const REGULATION_STOP_BIGRAMS = new Set([
   '依据', '电力', '安全', '工作', '规程', '部分', '要求', '下列', '关于', '说法',
   '正确', '错误', '的是', '可以', '应当', '必须', '进行', '人员', '作业', '规定'
@@ -176,6 +218,7 @@ function findRegulationMatches(question, bankId, regulationData, limit = 3) {
 global.QuizCore = {
   normalizeText, normalizeChoice, isCorrectAnswer, usesImmediateSubmission, matchesQuestionGroup,
   normalizeQuestionProgress, recordQuestionResult, createResumeSnapshot, isResumeAvailable, shuffled,
+  EXAM_SECTIONS, examQuestionPools, createExamPaper, gradeExamPaper,
   normalizeSearchText, regulationTokens, regulationReferences, sourceIdsForQuestion, findRegulationMatches
 }
 })(globalThis)

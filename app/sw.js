@@ -3,7 +3,7 @@ const CACHE_REVISION = '__PWA_CACHE_REVISION__'
 const CACHE_PREFIX = `huadian-quiz:${new URL(self.registration.scope).pathname}:`
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_REVISION}`
 const APP_SHELL = [
-  './', './index.html', './styles.css', './core.js', './main.js', './pwa.js',
+  './', './index.html', './styles.css', './core.js', './exam.js', './main.js', './pwa.js',
   './banks-data.js', './regulations-data.js', './manifest.webmanifest',
   './assets/icon.svg', './assets/icon.png', './assets/icon-192.png'
 ]
