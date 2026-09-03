@@ -124,11 +124,6 @@ h1, h2, h3, p { margin-top: 0; }
 
 .practice-shell { padding-bottom: 22px; }
 main[data-view="practice"] { touch-action: pan-y pinch-zoom; }
-.practice-history { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
-.practice-history p { flex: 1; min-width: 140px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.practice-history .tiny-button { min-height: 44px; }
-.practice-history .tiny-button:disabled { opacity: .4; cursor: default; }
-.practice-history-help { color: var(--muted); font-size: 12px; }
 .practice-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
 .practice-progress .progress-track { flex: 1; margin: 0; background: #ddd9ce; }
 .practice-progress span { color: var(--muted); font-size: 11px; }
@@ -193,6 +188,11 @@ main[data-view="practice"] { touch-action: pan-y pinch-zoom; }
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .modal-head h2 { margin: 0; font-size: 19px; }
 .modal-close { border: 0; background: var(--paper); width: 34px; height: 34px; border-radius: 50%; font-size: 19px; }
+.swipe-guide-backdrop { place-items: center; padding: 24px; }
+.modal.swipe-guide { width: min(360px, 100%); border-radius: 22px; padding: 24px; }
+.swipe-guide .modal-head { gap: 12px; }
+.swipe-guide .modal-close { flex: none; }
+.swipe-guide p { margin-bottom: 12px; color: var(--muted); font-size: 14px; line-height: 1.75; }
 .form-group { margin-bottom: 13px; }
 .form-group label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 700; }
 .form-group input, .form-group textarea, .form-group select { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 11px; background: #fff; outline: none; }

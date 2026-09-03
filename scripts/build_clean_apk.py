@@ -24,7 +24,7 @@ REPLACEMENTS = {
     "com.nicron.webview.MainActivity": "com.inori.hdquizstudy.StudyView",
     "android.permission.INTERNET": "com.inori.hdquizstudy.NOOPX",
     "公众号音频提取": "华电离线刷题库",
-    "1.0.0": "1.6.1",
+    "1.0.0": "1.6.2",
 }
 
 
@@ -199,7 +199,7 @@ def main() -> None:
         manifest_data = manifest.read_bytes()
         for old, new in REPLACEMENTS.items():
             manifest_data = replace_equal_utf16(manifest_data, old, new)
-        manifest_data = set_manifest_integer(manifest_data, "versionCode", 10601)
+        manifest_data = set_manifest_integer(manifest_data, "versionCode", 10602)
         manifest_data = disable_manifest_boole(manifest_data, {"usesCleartextTraffic", "supportsPictureInPicture"})
         manifest_data = remove_binary_xml_elements(manifest_data, {"uses-permission"})
         manifest.write_bytes(manifest_data)

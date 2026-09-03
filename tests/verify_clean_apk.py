@@ -86,8 +86,8 @@ def main() -> None:
         elements, attrs = manifest_facts(apk.read("AndroidManifest.xml"))
         assert "uses-permission" not in elements
         assert attrs["package"][2] == "com.inori.hdquizstudy"
-        assert attrs["versionCode"][1] == 10601
-        assert attrs["versionName"][2] == "1.6.1"
+        assert attrs["versionCode"][1] == 10602
+        assert attrs["versionName"][2] == "1.6.2"
         assert attrs["label"][2] == "华电离线刷题库"
         assert attrs["name"][2] in {"com.inori.hdquizstudy.StudyView", "android.intent.category.LAUNCHER"}
         assert attrs["usesCleartextTraffic"][1] == 0

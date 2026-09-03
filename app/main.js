@@ -26,6 +26,7 @@ const stored = loadStoredState()
 const progress = stored.progress || {}
 const edits = stored.edits || {}
 const resumeSessions = stored.resumeSessions || {}
+let swipeGuideDismissed = stored.swipeGuideDismissed === true
 let currentBankId = stored.currentBankId || null
 
 function loadStoredState() {
@@ -38,7 +39,7 @@ function loadStoredState() {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, swipeGuideDismissed }))
     return true
   } catch {
     if (!storageWarningShown) showToast('浏览器无法保存进度，请允许本站使用本地存储')
@@ -130,6 +131,38 @@ function showToast(message) {
   toastNode.textContent = message
   toastNode.classList.add('show')
   toastTimer = setTimeout(() => toastNode.classList.remove('show'), 1700)
+}
+
+function showSwipeGuide() {
+  if (swipeGuideDismissed || !['home', 'dashboard'].includes(currentView)) return
+  const previousFocus = document.activeElement
+  const close = () => {
+    swipeGuideDismissed = true
+    saveState()
+    modalRoot.innerHTML = ''
+    previousFocus?.focus()
+  }
+  modalRoot.innerHTML = `<div class="modal-backdrop swipe-guide-backdrop"><section class="modal swipe-guide" role="dialog" aria-modal="true" aria-labelledby="swipe-guide-title" aria-describedby="swipe-guide-copy">
+    <div class="modal-head"><h2 id="swipe-guide-title">右滑，回看上一题</h2><button class="modal-close" type="button" aria-label="关闭提示">×</button></div>
+    <div id="swipe-guide-copy">
+      <p>刷题时向右滑动，即可查看刚才的答题；向左滑动，返回后面的题目。</p>
+      <p>回看时，答对的题也会显示对应的安规条文。</p>
+    </div>
+    <button class="primary-button full-button modal-done" type="button">知道了</button>
+  </section></div>`
+  const first = modalRoot.querySelector('.modal-close')
+  const last = modalRoot.querySelector('.modal-done')
+  first.addEventListener('click', close)
+  last.addEventListener('click', close)
+  modalRoot.querySelector('.modal-backdrop').addEventListener('click', event => { if (event.target === event.currentTarget) close() })
+  modalRoot.querySelector('.modal').addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); close() }
+    if (event.key === 'Tab') {
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
+  })
+  first.focus()
 }
 
 function setHeader(title, subtitle = '', { back = false, switcher = false } = {}) {
@@ -436,7 +469,7 @@ function reviewPreviousQuestion() {
   // Settling the advance also invalidates its pending timer.
   if (session.autoAdvancing) advanceCurrentQuestion()
   const previousIndex = practiceQuestionState().index - 1
-  if (previousIndex < 0 || !session.results[previousIndex]) return showToast('已经是本轮第一题')
+  if (previousIndex < 0 || !session.results[previousIndex]) return
   session.reviewIndex = previousIndex
   renderPractice()
   window.scrollTo(0, 0)
@@ -471,11 +504,6 @@ function renderPractice() {
   const returnLabel = session.index >= session.ids.length ? '返回结果' : '返回当前题'
   app.innerHTML = `<section class="practice-shell">
     <div class="practice-progress"><div class="progress-track"><i style="width:${percent}%"></i></div><span>${displayIndex} / ${displayTotal}</span></div>
-    <div class="practice-history">
-      <button id="previous-question" class="tiny-button" type="button" ${view.index === 0 && !session.autoAdvancing ? 'disabled' : ''}>上一题</button>
-      <p role="status">${view.reviewing ? '历史回看 · 左滑上一题，右滑返回' : '向左滑动，回看已答题'}</p>
-      ${view.reviewing ? `<button id="return-current" class="tiny-button" type="button">${returnLabel}</button>` : ''}
-    </div>
     <article class="question-card">
       <div class="question-card-header">
         <span class="type-chip">${typeName(question.type)}${question.type === 'multiple' ? ' · 可多选' : ''}</span>
@@ -583,8 +611,6 @@ function regulationPanel(question) {
 }
 
 function bindPractice(question) {
-  app.querySelector('#previous-question').addEventListener('click', reviewPreviousQuestion)
-  app.querySelector('#return-current')?.addEventListener('click', returnToCurrentQuestion)
   app.querySelector('#practice-favorite').addEventListener('click', event => { toggleFavorite(question.id); event.currentTarget.classList.toggle('active', questionState(question.id).favorite) })
   app.querySelectorAll('[data-option]').forEach(button => button.addEventListener('click', () => {
     if (practiceQuestionState().submitted) return
@@ -652,14 +678,11 @@ function renderSessionComplete() {
     <div class="score-ring"><div><strong>${score}%</strong><small>正确率</small></div></div>
     <h1>本轮练习完成</h1>
     <p>答对 ${session.correct} 题，答错 ${session.wrong} 题</p>
-    <p class="practice-history-help">向左滑动，回看本轮已答题</p>
     <div class="complete-actions">
-      <button id="review-answers" class="secondary-button" type="button">回看答题</button>
       ${session.wrong ? '<button id="retry-session-wrong" class="primary-button" type="button">重刷本轮错题</button>' : ''}
       <button id="back-dashboard" class="secondary-button" type="button">返回题库主页</button>
     </div>
   </section>`
-  app.querySelector('#review-answers').addEventListener('click', reviewPreviousQuestion)
   app.querySelector('#retry-session-wrong')?.addEventListener('click', () => {
     const ids = session.results.filter(result => !result.correct).map(result => result.id)
     startSession(ids, '本轮错题')
@@ -750,7 +773,7 @@ app.addEventListener('pointerup', event => {
   if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy) * 1.5) return
   suppressPracticeClickUntil = Date.now() + 500
   event.preventDefault()
-  if (dx < 0) reviewPreviousQuestion()
+  if (dx > 0) reviewPreviousQuestion()
   else reviewNextQuestion()
 }, true)
 app.addEventListener('pointercancel', () => { practiceGesture = null }, true)
@@ -796,6 +819,7 @@ function boot() {
     currentView = currentBankId ? 'dashboard' : 'home'
     saveState()
     render()
+    showSwipeGuide()
   } catch (error) {
     console.error(error)
     app.innerHTML = '<section class="empty-state"><div class="empty-icon">!</div><h2>题库加载失败</h2></section>'
