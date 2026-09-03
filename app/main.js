@@ -1,4 +1,4 @@
-const { isCorrectAnswer, normalizeChoice, usesImmediateSubmission, matchesQuestionGroup, createResumeSnapshot, isResumeAvailable, shuffled } = globalThis.QuizCore
+const { isCorrectAnswer, normalizeChoice, usesImmediateSubmission, matchesQuestionGroup, normalizeQuestionProgress, recordQuestionResult, createResumeSnapshot, isResumeAvailable, shuffled, findRegulationMatches } = globalThis.QuizCore
 
 const STORAGE_KEY = 'huadian-quiz-state-v1'
 const CORRECT_FEEDBACK_DELAY_MS = 400
@@ -14,12 +14,13 @@ const installButton = document.querySelector('#install-button')
 const connectionStatus = document.querySelector('#connection-status')
 
 let banks = new Map()
+let regulationData = { sources: [], clauses: [] }
 let currentView = 'home'
 let historyStack = []
-let listState = { mode: 'library', query: '', chapter: 'all', limit: 60 }
+let listState = { mode: 'library', query: '', chapter: 'all', limit: 60, wrongGroup: 'current' }
 let session = null
 let toastTimer = null
-let deferredInstallPrompt = null
+let storageWarningShown = false
 
 const stored = loadStoredState()
 const progress = stored.progress || {}
@@ -36,7 +37,14 @@ function loadStoredState() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions }))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions }))
+    return true
+  } catch {
+    if (!storageWarningShown) showToast('浏览器无法保存进度，请允许本站使用本地存储')
+    storageWarningShown = true
+    return false
+  }
 }
 
 function saveCurrentSession() {
@@ -75,7 +83,7 @@ function typeName(type) {
 }
 
 function questionState(id) {
-  if (!progress[id]) progress[id] = { attempts: 0, wrongCount: 0, favorite: false, correctCount: 0 }
+  progress[id] = normalizeQuestionProgress(progress[id])
   return progress[id]
 }
 
@@ -101,18 +109,20 @@ function findQuestion(id) {
 
 function statsFor(bank) {
   let answered = 0
-  let wrong = 0
+  let currentWrong = 0
+  let wrongEver = 0
   let favorite = 0
   let attempts = 0
   for (const question of bank.questions) {
-    const state = progress[question.id]
-    if (!state) continue
+    if (!progress[question.id]) continue
+    const state = questionState(question.id)
     if (state.attempts > 0) answered += 1
-    if (state.wrongCount > 0) wrong += 1
+    if (state.currentWrong) currentWrong += 1
+    if (state.wrongCount > 0) wrongEver += 1
     if (state.favorite) favorite += 1
     attempts += state.attempts || 0
   }
-  return { answered, wrong, favorite, attempts, percent: Math.round(answered / bank.questionCount * 100) }
+  return { answered, currentWrong, wrongEver, favorite, attempts, percent: Math.round(answered / bank.questionCount * 100) }
 }
 
 function showToast(message) {
@@ -124,6 +134,7 @@ function showToast(message) {
 
 function setHeader(title, subtitle = '', { back = false, switcher = false } = {}) {
   pageTitle.textContent = title
+  pageTitle.title = title
   pageSubtitle.textContent = subtitle
   pageSubtitle.classList.toggle('hidden', !subtitle)
   backButton.classList.toggle('hidden', !back)
@@ -168,23 +179,26 @@ function renderHome() {
   setHeader('华电刷题')
   setBottomNav(false)
   app.innerHTML = `
+    <div class="library-heading"><div><h1>选择题库</h1><p>${banks.size} 个题库 · ${[...banks.values()].reduce((total, bank) => total + bank.questionCount, 0)} 道题</p></div><span>v${esc(document.querySelector('meta[name="app-version"]').content)}</span></div>
     <section class="bank-grid">
       ${[...banks.values()].map(bank => {
         const stats = statsFor(bank)
-        return `<article class="bank-card ${bank.id}" data-bank="${bank.id}" tabindex="0">
+        const theme = bank.id === 'youththeory2' ? 'theory' : ''
+        return `<article class="bank-card ${theme}" data-bank="${bank.id}" tabindex="0" role="button" aria-label="打开${esc(bank.title)}">
           <h2>${esc(bank.title)}</h2>
-          <p>${bank.questionCount} 道题 · ${bank.chapters.length} 个组</p>
+          <p>${bank.questionCount} 道题 · ${bank.chapters.length} 个章节</p>
           <div class="bank-stats">
             <div><strong>${stats.answered}</strong><small>已答</small></div>
-            <div><strong>${stats.wrong}</strong><small>错题</small></div>
+            <div><strong>${stats.currentWrong}</strong><small>待巩固</small></div>
             <div><strong>${stats.favorite}</strong><small>收藏</small></div>
           </div>
         </article>`
       }).join('')}
-    </section>`
+    </section>
+    <p class="library-note">练习进度、错题与收藏保存在当前浏览器。离线就绪后，断网也能刷题和查看安规原文。</p>`
   app.querySelectorAll('[data-bank]').forEach(card => {
     card.addEventListener('click', () => selectBank(card.dataset.bank))
-    card.addEventListener('keydown', event => { if (event.key === 'Enter') selectBank(card.dataset.bank) })
+    card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectBank(card.dataset.bank) } })
   })
 }
 
@@ -194,13 +208,13 @@ function renderDashboard() {
   const stats = statsFor(bank)
   const savedSession = savedSessionForBank(bank.id)
   const headerTitle = bank.title
-  setHeader(headerTitle)
+  setHeader(headerTitle, '', { switcher: banks.size > 1 })
   setBottomNav(true, 'dashboard')
   app.innerHTML = `
     <section class="progress-card">
       <div class="progress-top"><div><span>题库进度</span><br><strong>${stats.percent}%</strong></div><span>${stats.answered} / ${bank.questionCount}</span></div>
       <div class="progress-track"><i style="width:${stats.percent}%"></i></div>
-      <div class="progress-notes"><span>累计作答 ${stats.attempts} 次</span><span>收藏 ${stats.favorite} 题</span></div>
+      <div class="progress-notes"><span>累计作答 ${stats.attempts} 次</span><span>历史错题 ${stats.wrongEver} 题</span><span>收藏 ${stats.favorite} 题</span></div>
     </section>
     <section class="action-grid">
       ${savedSession ? '<button class="action-card continue" data-action="continue"><span class="action-icon">▶</span><strong>继续刷题</strong></button>' : ''}
@@ -208,7 +222,7 @@ function renderDashboard() {
       <button class="action-card" data-action="start-at"><span class="action-icon">#</span><strong>指定题号</strong></button>
       <button class="action-card" data-action="by-type"><span class="action-icon">≡</span><strong>题型刷题</strong></button>
       <button class="action-card" data-action="random"><span class="action-icon">↝</span><strong>随机练习</strong></button>
-      <button class="action-card accent" data-action="wrong"><span class="action-icon">×</span><strong>重刷错题</strong></button>
+      <button class="action-card accent" data-action="wrong"><span class="action-icon">×</span><strong>重刷待巩固（${stats.currentWrong}）</strong></button>
       <button class="action-card" data-action="favorite"><span class="action-icon">★</span><strong>收藏练习</strong></button>
     </section>`
   app.querySelector('[data-action="continue"]')?.addEventListener('click', continueSession)
@@ -263,10 +277,18 @@ function openStartPicker() {
   modalRoot.querySelector('#start-position').focus()
 }
 
+function isInWrongGroup(state, group = 'current') {
+  return group === 'history' ? state.wrongCount > 0 : state.currentWrong
+}
+
+function wrongGroupLabel(group = listState.wrongGroup) {
+  return group === 'history' ? '历史错题' : '待巩固'
+}
+
 function filteredQuestions(mode) {
   return questionsForBank().filter(question => {
     const state = questionState(question.id)
-    if (mode === 'wrong' && state.wrongCount <= 0) return false
+    if (mode === 'wrong' && !isInWrongGroup(state, listState.wrongGroup)) return false
     if (mode === 'favorite' && !state.favorite) return false
     if (listState.chapter !== 'all' && question.chapter !== listState.chapter) return false
     if (listState.query) {
@@ -279,11 +301,23 @@ function filteredQuestions(mode) {
 }
 
 function renderList(mode) {
-  listState = { mode, query: '', chapter: 'all', limit: 60 }
+  listState = { mode, query: '', chapter: 'all', limit: 60, wrongGroup: 'current' }
   const label = mode === 'library' ? '全部题目' : mode === 'wrong' ? '错题本' : '我的收藏'
+  const stats = mode === 'wrong' ? statsFor(rawBank()) : null
   setHeader(label, '', { switcher: true })
   setBottomNav(true, mode)
   app.innerHTML = `
+    ${mode === 'wrong' ? `<section class="wrong-group-panel">
+      <div class="wrong-group-switch" role="tablist" aria-label="错题分组">
+        <button class="active" data-wrong-group="current" type="button" role="tab" aria-selected="true">
+          <span><strong>待巩固</strong><small>最近一次做错</small></span><b>${stats.currentWrong}</b>
+        </button>
+        <button data-wrong-group="history" type="button" role="tab" aria-selected="false">
+          <span><strong>历史错题</strong><small>错过即保留</small></span><b>${stats.wrongEver}</b>
+        </button>
+      </div>
+      <p id="wrong-group-help" class="wrong-group-help">做对后会自动移出，可持续练习至 0。</p>
+    </section>` : ''}
     <div class="toolbar">
       <input id="search" class="search" type="search" placeholder="搜索题干、选项或答案">
       <select id="chapter-filter" class="filter-select" aria-label="章节筛选">
@@ -295,6 +329,19 @@ function renderList(mode) {
   const search = app.querySelector('#search')
   search.addEventListener('input', () => { listState.query = search.value.trim(); listState.limit = 60; updateListResults() })
   app.querySelector('#chapter-filter').addEventListener('change', event => { listState.chapter = event.target.value; listState.limit = 60; updateListResults() })
+  app.querySelectorAll('[data-wrong-group]').forEach(button => button.addEventListener('click', () => {
+    listState.wrongGroup = button.dataset.wrongGroup
+    listState.limit = 60
+    app.querySelectorAll('[data-wrong-group]').forEach(item => {
+      const active = item.dataset.wrongGroup === listState.wrongGroup
+      item.classList.toggle('active', active)
+      item.setAttribute('aria-selected', String(active))
+    })
+    app.querySelector('#wrong-group-help').textContent = listState.wrongGroup === 'history'
+      ? '曾经做错过就会保留，方便长期回顾。'
+      : '做对后会自动移出，可持续练习至 0。'
+    updateListResults()
+  }))
   updateListResults()
 }
 
@@ -302,9 +349,11 @@ function updateListResults() {
   const target = app.querySelector('#list-results')
   if (!target) return
   const items = filteredQuestions(listState.mode)
-  const label = listState.mode === 'library' ? '题目' : listState.mode === 'wrong' ? '错题' : '收藏'
+  const label = listState.mode === 'library' ? '题目' : listState.mode === 'wrong' ? wrongGroupLabel() : '收藏'
   if (!items.length) {
-    target.innerHTML = `<section class="empty-state"><div class="empty-icon">${listState.mode === 'wrong' ? '✓' : listState.mode === 'favorite' ? '☆' : '?'}</div><h2>暂无${label}</h2></section>`
+    const emptyTitle = listState.mode === 'wrong' && listState.wrongGroup === 'current' ? '待巩固已清零' : `暂无${label}`
+    const emptyDetail = listState.mode === 'wrong' && listState.wrongGroup === 'current' ? '<p>最近一次做错的题已经全部掌握。</p>' : ''
+    target.innerHTML = `<section class="empty-state"><div class="empty-icon">${listState.mode === 'wrong' ? '✓' : listState.mode === 'favorite' ? '☆' : '?'}</div><h2>${emptyTitle}</h2>${emptyDetail}</section>`
     return
   }
   const visible = items.slice(0, listState.limit)
@@ -313,7 +362,7 @@ function updateListResults() {
     <div class="question-list">${visible.map(questionRow).join('')}</div>
     ${visible.length < items.length ? `<button id="load-more" class="secondary-button full-button">再显示 ${Math.min(60, items.length - visible.length)} 道</button>` : ''}`
   bindQuestionRows(target)
-  target.querySelector('#practice-filtered')?.addEventListener('click', () => startSession(items.map(q => q.id), listState.mode === 'wrong' ? '错题重刷' : '收藏练习'))
+  target.querySelector('#practice-filtered')?.addEventListener('click', () => startSession(items.map(q => q.id), listState.mode === 'wrong' ? (listState.wrongGroup === 'history' ? '历史错题练习' : '待巩固重刷') : '收藏练习'))
   target.querySelector('#load-more')?.addEventListener('click', () => { listState.limit += 60; updateListResults() })
 }
 
@@ -323,6 +372,7 @@ function questionRow(question) {
     <div class="question-row-top">
       <div class="question-meta">${esc(question.chapter)} · ${typeName(question.type)} · 第 ${question.number} 题</div>
       <div class="row-actions">
+        ${listState.mode === 'wrong' && listState.wrongGroup === 'history' && !state.currentWrong ? '<span class="mastered-badge">已巩固</span>' : ''}
         ${state.wrongCount ? `<span class="wrong-badge">错 ${state.wrongCount} 次</span>` : ''}
         <button class="favorite-button ${state.favorite ? 'active' : ''}" data-favorite type="button" aria-label="收藏">★</button>
       </div>
@@ -341,13 +391,13 @@ function bindQuestionRows(root) {
   })
 }
 
-function startFilteredSession(mode) {
-  const ids = questionsForBank().filter(question => mode === 'wrong' ? questionState(question.id).wrongCount > 0 : questionState(question.id).favorite).map(question => question.id)
+function startFilteredSession(mode, wrongGroup = 'current') {
+  const ids = questionsForBank().filter(question => mode === 'wrong' ? isInWrongGroup(questionState(question.id), wrongGroup) : questionState(question.id).favorite).map(question => question.id)
   if (!ids.length) {
-    showToast(mode === 'wrong' ? '暂无错题' : '暂无收藏')
+    showToast(mode === 'wrong' ? (wrongGroup === 'history' ? '暂无历史错题' : '待巩固已清零') : '暂无收藏')
     return
   }
-  startSession(ids, mode === 'wrong' ? '错题重刷' : '收藏练习')
+  startSession(ids, mode === 'wrong' ? (wrongGroup === 'history' ? '历史错题练习' : '待巩固重刷') : '收藏练习')
 }
 
 function startSession(ids, title, { displayStart = 1, displayTotal = ids.length } = {}) {
@@ -416,7 +466,62 @@ function feedbackPanel(question) {
   const answerText = question.type === 'single' || question.type === 'multiple'
     ? `${question.answer}（${question.options.filter(option => normalizeChoice(question.answer).includes(option.key)).map(option => option.text).join('；')}）`
     : question.answerRaw || question.answer
-  return `<div class="answer-panel ${result.correct ? 'correct' : 'wrong'}"><strong>${result.correct ? '回答正确' : '回答错误'}</strong><p>正确答案：${esc(answerText)}</p>${!result.correct ? `<p>你的答案：${esc(result.userAnswer || '未作答')}</p>` : ''}</div>`
+  return `<div class="answer-panel ${result.correct ? 'correct' : 'wrong'}"><strong>${result.correct ? '回答正确' : '回答错误'}</strong><p>正确答案：${esc(answerText)}</p>${!result.correct ? `<p>你的答案：${esc(result.userAnswer || '未作答')}</p>` : ''}</div>${result.correct ? '' : regulationPanel(question)}`
+}
+
+function correctAnswerText(question) {
+  if (question.type === 'single' || question.type === 'multiple') {
+    const keys = new Set(normalizeChoice(question.answer).split(''))
+    return question.options.filter(option => keys.has(option.key)).map(option => option.text).join('；')
+  }
+  return question.answerRaw || question.answer || ''
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function highlightedRegulationText(text, question) {
+  const answer = correctAnswerText(question).trim()
+  const terms = new Set()
+  if (answer.length <= 30 && !['正确', '错误'].includes(answer) && (answer.length >= 2 || /\d/.test(answer))) terms.add(answer)
+  for (const match of answer.matchAll(/\d+(?:\.\d+)?(?:%|℃|kv|mpa|mm|cm|m|h|min|年|月|次)?/gi)) {
+    if (match[0]) terms.add(match[0])
+  }
+  for (const match of String(question.stem || '').matchAll(/[“"]([^”"]{2,16})[”"]/g)) terms.add(match[1])
+  const ordered = [...terms].sort((left, right) => right.length - left.length)
+  if (!ordered.length) return esc(text)
+  const patterns = ordered.map(term => /^\d/.test(term) ? `(?<!\\d)${escapeRegExp(term)}(?!\\d)` : escapeRegExp(term))
+  const parts = String(text).split(new RegExp(`(${patterns.join('|')})`, 'gi'))
+  const normalizedTerms = new Set(ordered.map(term => term.toLowerCase()))
+  return parts.map(part => normalizedTerms.has(part.toLowerCase()) ? `<mark>${esc(part)}</mark>` : esc(part)).join('')
+}
+
+function regulationPanel(question) {
+  const matches = findRegulationMatches(question, currentBankId, regulationData, 3)
+  if (!matches.length) return ''
+  const sources = new Map(regulationData.sources.map(source => [source.id, source]))
+  return `<section class="regulation-panel" aria-labelledby="regulation-title">
+    <header class="regulation-panel-head">
+      <span class="regulation-book" aria-hidden="true">文</span>
+      <div><strong id="regulation-title">安规原文依据</strong><p>根据题干与正确答案，从两本 2024 版安规中离线匹配</p></div>
+    </header>
+    <div class="regulation-matches">
+      ${matches.map((match, index) => {
+        const source = sources.get(match.source) || {}
+        const refLabel = match.kind === 'table' ? `表 ${match.ref}` : `第 ${match.ref} 条`
+        return `<details class="regulation-match" ${index === 0 ? 'open' : ''}>
+          <summary>
+            <span class="regulation-rank">${index + 1}</span>
+            <span class="regulation-source"><strong>${esc(source.title || '安规原文')}</strong><small>${esc(source.standard || '')}</small></span>
+            <span class="regulation-ref">${esc(refLabel)}</span>
+          </summary>
+          <div class="regulation-copy"><p>${highlightedRegulationText(match.text, question)}</p></div>
+        </details>`
+      }).join('')}
+    </div>
+    <p class="regulation-note">匹配结果用于定位原文，实际执行请结合完整条款及所在章节。</p>
+  </section>`
 }
 
 function bindPractice(question) {
@@ -446,10 +551,9 @@ function bindPractice(question) {
 function submitAnswer(question, forcedWrong, autoAdvance = false) {
   if (!forcedWrong && !String(session.answer).trim()) return showToast('请先选择或填写答案')
   const correct = !forcedWrong && isCorrectAnswer(question, session.answer)
-  const state = questionState(question.id)
-  state.attempts += 1
-  if (correct) { state.correctCount += 1; session.correct += 1 }
-  else { state.wrongCount += 1; session.wrong += 1 }
+  progress[question.id] = recordQuestionResult(questionState(question.id), correct)
+  if (correct) session.correct += 1
+  else session.wrong += 1
   session.results.push({ id: question.id, correct, userAnswer: session.answer })
   session.submitted = true
   if (correct && autoAdvance) {
@@ -569,10 +673,16 @@ bottomNav.querySelectorAll('button').forEach(button => button.addEventListener('
 function boot() {
   try {
     const data = window.QUIZ_BANKS
-    if (!Array.isArray(data) || data.length !== 1 || data[0].id !== 'exam0828') throw new Error('Embedded question bank is unavailable')
+    const references = window.SAFETY_REGULATIONS
+    if (!Array.isArray(data) || !data.length) throw new Error('Embedded question banks are unavailable')
+    if (!references || !Array.isArray(references.sources) || !Array.isArray(references.clauses)) throw new Error('Embedded regulation references are unavailable')
     banks = new Map(data.map(bank => [bank.id, bank]))
-    currentBankId = 'exam0828'
-    currentView = 'dashboard'
+    regulationData = references
+    if (banks.size !== data.length || !banks.has('exam0828') || !banks.has('safetyweek2') || !banks.has('youththeory2')) {
+      throw new Error('Embedded question banks are incomplete')
+    }
+    if (!currentBankId || !banks.has(currentBankId)) currentBankId = null
+    currentView = currentBankId ? 'dashboard' : 'home'
     saveState()
     render()
   } catch (error) {
@@ -582,71 +692,3 @@ function boot() {
 }
 
 boot()
-
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
-}
-
-function isAppleTouchDevice() {
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
-
-function showInstallHelp() {
-  const close = () => { modalRoot.innerHTML = '' }
-  modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal install-guide" role="dialog" aria-modal="true" aria-label="安装到 iPad">
-    <div class="modal-head"><div><span class="eyebrow">离线使用</span><h2>安装到 iPad 主屏幕</h2></div><button class="modal-close" type="button" aria-label="关闭">×</button></div>
-    <ol>
-      <li><span>1</span><div><strong>用 Safari 打开本页</strong><p>iPad 上需要通过 Safari 添加网页应用。</p></div></li>
-      <li><span>2</span><div><strong>轻点“共享”按钮</strong><p>它通常位于浏览器工具栏中，是带向上箭头的方框。</p></div></li>
-      <li><span>3</span><div><strong>选择“添加到主屏幕”</strong><p>以后可像普通 App 一样全屏启动，题库与进度支持离线使用。</p></div></li>
-    </ol>
-    <button class="primary-button full-button modal-done" type="button">知道了</button>
-  </section></div>`
-  modalRoot.querySelector('.modal-close').addEventListener('click', close)
-  modalRoot.querySelector('.modal-done').addEventListener('click', close)
-  modalRoot.querySelector('.modal-backdrop').addEventListener('click', event => { if (event.target === event.currentTarget) close() })
-}
-
-installButton.addEventListener('click', async () => {
-  if (deferredInstallPrompt) {
-    deferredInstallPrompt.prompt()
-    await deferredInstallPrompt.userChoice
-    deferredInstallPrompt = null
-    installButton.classList.add('hidden')
-    return
-  }
-  showInstallHelp()
-})
-
-window.addEventListener('beforeinstallprompt', event => {
-  event.preventDefault()
-  deferredInstallPrompt = event
-  if (!isStandalone()) installButton.classList.remove('hidden')
-})
-
-window.addEventListener('appinstalled', () => installButton.classList.add('hidden'))
-
-if (isAppleTouchDevice() && !isStandalone()) installButton.classList.remove('hidden')
-
-function syncConnectionStatus() {
-  const offline = !navigator.onLine
-  connectionStatus.textContent = offline ? '当前离线' : '离线可用'
-  connectionStatus.classList.toggle('offline', offline)
-  connectionStatus.classList.toggle('hidden', !offline)
-}
-
-window.addEventListener('online', () => {
-  syncConnectionStatus()
-  showToast('已恢复网络连接')
-})
-window.addEventListener('offline', () => {
-  syncConnectionStatus()
-  showToast('已进入离线模式')
-})
-syncConnectionStatus()
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Service worker registration failed', error))
-  })
-}

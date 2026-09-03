@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "华电安规刷题",
+  "name": "华电刷题",
   "short_name": "华电刷题",
-  "description": "为 iPad 优化、可完全离线使用的华电安规刷题应用",
+  "description": "适配手机、iPad 与电脑的华电多题库离线刷题应用",
   "lang": "zh-CN",
   "start_url": "./",
   "scope": "./",

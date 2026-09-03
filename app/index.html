@@ -2,9 +2,10 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#15382f">
-  <meta name="description" content="为 iPad 优化的华电安规离线刷题应用">
+  <meta name="description" content="华电刷题：5 个题库、6588 道题，支持手机、iPad 与电脑离线练习、错题巩固和安规原文检索。">
+  <meta name="app-version" content="1.6.0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -23,9 +24,14 @@
       <div><strong id="page-title">华电刷题</strong><small id="page-subtitle" class="hidden"></small></div>
     </div>
     <span id="connection-status" class="connection-status hidden" aria-live="polite">离线可用</span>
-    <button id="install-button" class="install-button hidden" type="button">安装到 iPad</button>
+    <button id="install-button" class="install-button hidden" type="button">安装应用</button>
     <button id="bank-switch" class="bank-switch hidden" type="button">切换题库</button>
   </header>
+
+  <aside id="update-notice" class="update-notice hidden" role="status">
+    <span>新版已下载，更新后即可使用。</span>
+    <button id="apply-update" class="secondary-button" type="button">保存进度并更新</button>
+  </aside>
 
   <main id="app" aria-live="polite">
     <div class="loading"><span class="spinner"></span><p>正在加载题库…</p></div>
@@ -40,8 +46,11 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="modal-root"></div>
+  <noscript><p class="empty-state">请在浏览器中启用 JavaScript，以加载题库和进行练习。</p></noscript>
   <script src="banks-data.js"></script>
+  <script src="regulations-data.js"></script>
   <script src="core.js"></script>
   <script src="main.js"></script>
+  <script src="pwa.js"></script>
 </body>
 </html>
