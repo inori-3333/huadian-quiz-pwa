@@ -406,28 +406,86 @@ function startSession(ids, title, { displayStart = 1, displayTotal = ids.length 
   navigate('practice')
 }
 
+// Keep the live question and its draft intact while browsing answered questions.
+// reviewIndex is deliberately omitted from createResumeSnapshot.
+function practiceQuestionState() {
+  const reviewing = Number.isInteger(session.reviewIndex)
+  const index = reviewing ? session.reviewIndex : session.index
+  const result = session.results[index]
+  return {
+    index,
+    reviewing,
+    result,
+    answer: reviewing ? String(result.userAnswer || '') : session.answer,
+    submitted: reviewing || session.submitted,
+    autoAdvancing: !reviewing && session.autoAdvancing
+  }
+}
+
+function advanceCurrentQuestion() {
+  session.index += 1
+  session.answer = ''
+  session.submitted = false
+  session.autoAdvancing = false
+  saveCurrentSession()
+}
+
+function reviewPreviousQuestion() {
+  if (!session) return
+  // A swipe during correct-answer feedback opens the answer just submitted.
+  // Settling the advance also invalidates its pending timer.
+  if (session.autoAdvancing) advanceCurrentQuestion()
+  const previousIndex = practiceQuestionState().index - 1
+  if (previousIndex < 0 || !session.results[previousIndex]) return showToast('已经是本轮第一题')
+  session.reviewIndex = previousIndex
+  renderPractice()
+  window.scrollTo(0, 0)
+}
+
+function returnToCurrentQuestion() {
+  delete session.reviewIndex
+  renderPractice()
+  window.scrollTo(0, 0)
+}
+
+function reviewNextQuestion() {
+  if (!session || !Number.isInteger(session.reviewIndex)) return
+  if (session.reviewIndex + 1 >= session.index) return returnToCurrentQuestion()
+  session.reviewIndex += 1
+  renderPractice()
+  window.scrollTo(0, 0)
+}
+
 function renderPractice() {
   setHeader(session?.title || '练习', '', { back: true })
   setBottomNav(false)
-  if (!session || session.index >= session.ids.length) return renderSessionComplete()
-  const question = findQuestion(session.ids[session.index])
+  if (!session) return
+  const view = practiceQuestionState()
+  if (view.index >= session.ids.length) return renderSessionComplete()
+  const question = findQuestion(session.ids[view.index])
   const state = questionState(question.id)
   const displayStart = Number(session.displayStart || 1)
   const displayTotal = Number(session.displayTotal || session.ids.length)
-  const displayIndex = displayStart + session.index
-  const percent = Math.round((displayIndex - 1 + (session.submitted ? 1 : 0)) / displayTotal * 100)
+  const displayIndex = displayStart + view.index
+  const percent = Math.round((displayIndex - 1 + (view.submitted ? 1 : 0)) / displayTotal * 100)
+  const returnLabel = session.index >= session.ids.length ? '返回结果' : '返回当前题'
   app.innerHTML = `<section class="practice-shell">
     <div class="practice-progress"><div class="progress-track"><i style="width:${percent}%"></i></div><span>${displayIndex} / ${displayTotal}</span></div>
+    <div class="practice-history">
+      <button id="previous-question" class="tiny-button" type="button" ${view.index === 0 && !session.autoAdvancing ? 'disabled' : ''}>上一题</button>
+      <p role="status">${view.reviewing ? '历史回看 · 左滑上一题，右滑返回' : '向左滑动，回看已答题'}</p>
+      ${view.reviewing ? `<button id="return-current" class="tiny-button" type="button">${returnLabel}</button>` : ''}
+    </div>
     <article class="question-card">
       <div class="question-card-header">
         <span class="type-chip">${typeName(question.type)}${question.type === 'multiple' ? ' · 可多选' : ''}</span>
         <div class="row-actions">${state.wrongCount ? `<span class="wrong-badge">累计错 ${state.wrongCount} 次</span>` : ''}<button id="practice-favorite" class="favorite-button ${state.favorite ? 'active' : ''}" type="button">★</button></div>
       </div>
       <h2>${esc(question.stem)}</h2>
-      ${answerControls(question)}
-      ${session.submitted ? (session.autoAdvancing ? '' : feedbackPanel(question)) : pendingAnswerActions(question)}
+      ${answerControls(question, view)}
+      ${view.submitted ? (view.autoAdvancing ? '' : feedbackPanel(question, view)) : pendingAnswerActions(question)}
     </article>
-    ${session.submitted && !session.autoAdvancing ? `<div class="practice-next"><button id="edit-current" class="secondary-button" type="button">编辑此题</button><button id="next-question" class="primary-button" type="button">${session.index + 1 >= session.ids.length ? '查看结果' : '下一题'}</button></div>` : ''}
+    ${view.submitted && !view.autoAdvancing ? `<div class="practice-next"><button id="edit-current" class="secondary-button" type="button">编辑此题</button><button id="next-question" class="primary-button" type="button">${view.reviewing ? (view.index + 1 < session.index ? '下一道已答题' : returnLabel) : (session.index + 1 >= session.ids.length ? '查看结果' : '下一题')}</button></div>` : ''}
   </section>`
   bindPractice(question)
 }
@@ -439,34 +497,34 @@ function pendingAnswerActions(question) {
   return '<div class="answer-actions"><button id="dont-know" class="secondary-button" type="button">不知道</button><button id="submit-answer" class="primary-button" type="button">提交答案</button></div>'
 }
 
-function answerControls(question) {
+function answerControls(question, view) {
   if (question.type === 'fill') {
-    const result = session.submitted ? session.results[session.results.length - 1] : null
+    const result = view.submitted ? view.result : null
     const resultClass = result ? (result.correct ? 'correct' : 'wrong') : ''
-    return `<input id="fill-answer" class="fill-answer ${resultClass}" type="text" placeholder="输入答案" value="${esc(session.answer)}" ${session.submitted ? 'disabled' : ''}>`
+    return `<input id="fill-answer" class="fill-answer ${resultClass}" type="text" placeholder="输入答案" value="${esc(view.answer)}" ${view.submitted ? 'disabled' : ''}>`
   }
   const options = question.type === 'judge'
     ? [{ key: '对', text: '正确' }, { key: '错', text: '错误' }]
     : question.options
-  const selected = question.type === 'multiple' ? normalizeChoice(session.answer).split('') : [session.answer]
+  const selected = question.type === 'multiple' ? normalizeChoice(view.answer).split('') : [view.answer]
   return `<div class="option-list">${options.map(option => {
     const chosen = selected.includes(option.key)
     let resultClass = ''
-    if (session.submitted) {
+    if (view.submitted) {
       const correctKeys = question.type === 'judge' ? [String(question.answer).includes('错') ? '错' : '对'] : normalizeChoice(question.answer).split('')
       if (correctKeys.includes(option.key)) resultClass = 'correct'
       else if (chosen) resultClass = 'wrong'
     }
-    return `<button class="option ${chosen ? 'selected' : ''} ${resultClass}" data-option="${esc(option.key)}" type="button" ${session.submitted ? 'disabled' : ''}><span class="option-key">${esc(option.key)}</span><span>${esc(option.text)}</span></button>`
+    return `<button class="option ${chosen ? 'selected' : ''} ${resultClass}" data-option="${esc(option.key)}" type="button" ${view.submitted ? 'disabled' : ''}><span class="option-key">${esc(option.key)}</span><span>${esc(option.text)}</span></button>`
   }).join('')}</div>`
 }
 
-function feedbackPanel(question) {
-  const result = session.results[session.results.length - 1]
+function feedbackPanel(question, view) {
+  const result = view.result
   const answerText = question.type === 'single' || question.type === 'multiple'
     ? `${question.answer}（${question.options.filter(option => normalizeChoice(question.answer).includes(option.key)).map(option => option.text).join('；')}）`
     : question.answerRaw || question.answer
-  return `<div class="answer-panel ${result.correct ? 'correct' : 'wrong'}"><strong>${result.correct ? '回答正确' : '回答错误'}</strong><p>正确答案：${esc(answerText)}</p>${!result.correct ? `<p>你的答案：${esc(result.userAnswer || '未作答')}</p>` : ''}</div>${result.correct ? '' : regulationPanel(question)}`
+  return `<div class="answer-panel ${result.correct ? 'correct' : 'wrong'}"><strong>${result.correct ? '回答正确' : '回答错误'}</strong><p>正确答案：${esc(answerText)}</p>${!result.correct ? `<p>你的答案：${esc(result.userAnswer || '未作答')}</p>` : ''}</div>${!result.correct || view.reviewing ? regulationPanel(question) : ''}`
 }
 
 function correctAnswerText(question) {
@@ -525,8 +583,11 @@ function regulationPanel(question) {
 }
 
 function bindPractice(question) {
+  app.querySelector('#previous-question').addEventListener('click', reviewPreviousQuestion)
+  app.querySelector('#return-current')?.addEventListener('click', returnToCurrentQuestion)
   app.querySelector('#practice-favorite').addEventListener('click', event => { toggleFavorite(question.id); event.currentTarget.classList.toggle('active', questionState(question.id).favorite) })
   app.querySelectorAll('[data-option]').forEach(button => button.addEventListener('click', () => {
+    if (practiceQuestionState().submitted) return
     const key = button.dataset.option
     if (question.type === 'multiple') {
       const values = new Set(normalizeChoice(session.answer).split('').filter(Boolean))
@@ -539,16 +600,24 @@ function bindPractice(question) {
     session.answer = key
     submitAnswer(question, false, true)
   }))
-  app.querySelector('#fill-answer')?.addEventListener('input', event => { session.answer = event.target.value; saveCurrentSession() })
+  app.querySelector('#fill-answer')?.addEventListener('input', event => {
+    if (practiceQuestionState().submitted) return
+    session.answer = event.target.value
+    saveCurrentSession()
+  })
   app.querySelector('#submit-answer')?.addEventListener('click', () => submitAnswer(question, false, true))
   app.querySelector('#dont-know')?.addEventListener('click', () => submitAnswer(question, true))
   app.querySelector('#next-question')?.addEventListener('click', () => {
-    session.index += 1; session.answer = ''; session.submitted = false; saveCurrentSession(); renderPractice(); window.scrollTo(0, 0)
+    if (practiceQuestionState().reviewing) return reviewNextQuestion()
+    advanceCurrentQuestion()
+    renderPractice()
+    window.scrollTo(0, 0)
   })
   app.querySelector('#edit-current')?.addEventListener('click', () => openEditor(question.id))
 }
 
 function submitAnswer(question, forcedWrong, autoAdvance = false) {
+  if (!session || practiceQuestionState().submitted || question.id !== session.ids[session.index]) return
   if (!forcedWrong && !String(session.answer).trim()) return showToast('请先选择或填写答案')
   const correct = !forcedWrong && isCorrectAnswer(question, session.answer)
   progress[question.id] = recordQuestionResult(questionState(question.id), correct)
@@ -560,14 +629,11 @@ function submitAnswer(question, forcedWrong, autoAdvance = false) {
     session.autoAdvancing = true
     saveCurrentSession()
     const activeSession = session
+    const answeredIndex = session.index
     renderPractice()
     setTimeout(() => {
-      if (session !== activeSession || !session.autoAdvancing) return
-      session.index += 1
-      session.answer = ''
-      session.submitted = false
-      session.autoAdvancing = false
-      saveCurrentSession()
+      if (session !== activeSession || session.index !== answeredIndex || !session.autoAdvancing) return
+      advanceCurrentQuestion()
       window.scrollTo(0, 0)
       renderPractice()
     }, CORRECT_FEEDBACK_DELAY_MS)
@@ -586,11 +652,14 @@ function renderSessionComplete() {
     <div class="score-ring"><div><strong>${score}%</strong><small>正确率</small></div></div>
     <h1>本轮练习完成</h1>
     <p>答对 ${session.correct} 题，答错 ${session.wrong} 题</p>
+    <p class="practice-history-help">向左滑动，回看本轮已答题</p>
     <div class="complete-actions">
+      <button id="review-answers" class="secondary-button" type="button">回看答题</button>
       ${session.wrong ? '<button id="retry-session-wrong" class="primary-button" type="button">重刷本轮错题</button>' : ''}
       <button id="back-dashboard" class="secondary-button" type="button">返回题库主页</button>
     </div>
   </section>`
+  app.querySelector('#review-answers').addEventListener('click', reviewPreviousQuestion)
   app.querySelector('#retry-session-wrong')?.addEventListener('click', () => {
     const ids = session.results.filter(result => !result.correct).map(result => result.id)
     startSession(ids, '本轮错题')
@@ -651,8 +720,50 @@ function parseEditedOptions(text) {
   }).filter(option => option.text)
 }
 
+// Bind once to the stable root: selecting an answer replaces the question DOM.
+// Leave vertical scrolling, pinch zoom and text input gestures to the browser.
+let practiceGesture = null
+let suppressPracticeClickUntil = 0
+app.addEventListener('pointerdown', event => {
+  if (!event.isPrimary) { practiceGesture = null; return }
+  suppressPracticeClickUntil = 0
+  if (currentView !== 'practice' || !session || !['touch', 'pen'].includes(event.pointerType)) return
+  if (event.target.closest('input:enabled, textarea, select, [contenteditable="true"]')) return
+  practiceGesture = { id: event.pointerId, x: event.clientX, y: event.clientY, session }
+}, true)
+app.addEventListener('pointermove', event => {
+  if (!practiceGesture || practiceGesture.id !== event.pointerId) return
+  const dx = event.clientX - practiceGesture.x
+  const dy = event.clientY - practiceGesture.y
+  if (Math.abs(dy) > 12 && Math.abs(dy) >= Math.abs(dx)) {
+    practiceGesture = null
+  } else if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    app.setPointerCapture(event.pointerId)
+  }
+}, true)
+app.addEventListener('pointerup', event => {
+  const gesture = practiceGesture
+  practiceGesture = null
+  if (!gesture || gesture.id !== event.pointerId || gesture.session !== session || currentView !== 'practice') return
+  const dx = event.clientX - gesture.x
+  const dy = event.clientY - gesture.y
+  if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy) * 1.5) return
+  suppressPracticeClickUntil = Date.now() + 500
+  event.preventDefault()
+  if (dx < 0) reviewPreviousQuestion()
+  else reviewNextQuestion()
+}, true)
+app.addEventListener('pointercancel', () => { practiceGesture = null }, true)
+app.addEventListener('click', event => {
+  if (event.detail !== 0 && Date.now() < suppressPracticeClickUntil) {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+  }
+}, true)
+
 backButton.addEventListener('click', () => {
   if (currentView === 'practice') {
+    if (Number.isInteger(session?.reviewIndex)) return returnToCurrentQuestion()
     session = null
     currentView = historyStack.pop() || 'dashboard'
     render()

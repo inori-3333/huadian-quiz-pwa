@@ -1,6 +1,6 @@
 {
   "name": "huadian-quiz-app",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,6 @@
     "embed-banks": "python scripts/embed_banks.py",
     "build": "npm run embed-banks && node scripts/build_pwa.mjs",
     "preview": "python -m http.server 8080 --directory dist",
-    "test": "node tests/app.test.mjs && node tests/pwa.test.mjs"
+    "test": "node tests/app.test.mjs && node tests/practice.test.mjs && node tests/pwa.test.mjs"
   }
 }

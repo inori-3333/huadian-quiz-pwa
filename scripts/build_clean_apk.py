@@ -24,7 +24,7 @@ REPLACEMENTS = {
     "com.nicron.webview.MainActivity": "com.inori.hdquizstudy.StudyView",
     "android.permission.INTERNET": "com.inori.hdquizstudy.NOOPX",
     "公众号音频提取": "华电离线刷题库",
-    "1.0.0": "1.2.3",
+    "1.0.0": "1.6.1",
 }
 
 
@@ -143,6 +143,19 @@ def remove_binary_xml_elements(data: bytes, names: set[str]) -> bytes:
     return bytes(output)
 
 
+def write_apk_entry(archive: zipfile.ZipFile, path: Path, name: str, compression: int) -> None:
+    """Write an APK member, aligning uncompressed payloads to four bytes."""
+    info = zipfile.ZipInfo.from_file(path, arcname=name)
+    info.compress_type = compression
+    if compression == zipfile.ZIP_STORED:
+        encoded_name = name.encode("utf-8")
+        data_offset = archive.fp.tell() + 30 + len(encoded_name)
+        if data_offset % 4:
+            payload_size = (-data_offset) % 4
+            info.extra = struct.pack("<HH", 0xD935, payload_size) + (b"\0" * payload_size)
+    archive.writestr(info, path.read_bytes(), compress_type=compression, compresslevel=9)
+
+
 def compile_dex(project: Path, r8: Path, build: Path) -> Path:
     stubs = build / "stub-classes"
     classes = build / "app-classes"
@@ -186,7 +199,7 @@ def main() -> None:
         manifest_data = manifest.read_bytes()
         for old, new in REPLACEMENTS.items():
             manifest_data = replace_equal_utf16(manifest_data, old, new)
-        manifest_data = set_manifest_integer(manifest_data, "versionCode", 10203)
+        manifest_data = set_manifest_integer(manifest_data, "versionCode", 10601)
         manifest_data = disable_manifest_boole(manifest_data, {"usesCleartextTraffic", "supportsPictureInPicture"})
         manifest_data = remove_binary_xml_elements(manifest_data, {"uses-permission"})
         manifest.write_bytes(manifest_data)
@@ -204,7 +217,7 @@ def main() -> None:
                     # Modern Android requires the compiled manifest and resource
                     # table to be mmap-friendly: uncompressed and zip-aligned.
                     compression = zipfile.ZIP_STORED if name in {"AndroidManifest.xml", "resources.arsc"} else zipfile.ZIP_DEFLATED
-                    archive.write(path, name, compress_type=compression)
+                    write_apk_entry(archive, path, name, compression)
     print(args.output)
 
 
