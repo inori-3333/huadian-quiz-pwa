@@ -17,6 +17,7 @@ def main() -> None:
     for name in (
         "exam0828.json",
         "safety-week2.json",
+        "safety-week3.json",
         "youth-theory-2.json",
         "safety2024general.json",
         "safety2024coal.json",

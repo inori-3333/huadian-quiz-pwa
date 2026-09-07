@@ -8,7 +8,7 @@ const bank = readBank('safety-week2')
 
 // Exact composition, section order, no duplicate IDs, source isolation, and
 // deterministic random inputs exercise both ends of the shuffle range.
-for (const source of [bank, readBank('exam0828')]) {
+for (const source of [bank, readBank('exam0828'), readBank('safety-week3')]) {
   for (const random of [() => 0, () => 0.999999, Math.random]) {
     const paper = createExamPaper(source.questions, random)
     assert.equal(paper.length, 65)
@@ -139,7 +139,7 @@ assert.equal(empty.run('exam.report.unanswered'), 65)
 // The actual dashboard -> setup -> start/resume handlers must bind the exam
 // to the current bank, without a second bank selector or cross-bank fallback.
 const currentBankOnly = createApplication()
-for (const id of ['safetyweek2', 'exam0828']) {
+for (const id of ['safetyweek2', 'exam0828', 'safetyweek3']) {
   currentBankOnly.run(`selectBank('${id}')`)
   currentBankOnly.app.querySelector('[data-action="exam"]').handlers.get('click')()
   assert.match(currentBankOnly.app.innerHTML, /当前题库：/)

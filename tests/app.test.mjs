@@ -10,7 +10,8 @@ const youthTheory2 = JSON.parse(fs.readFileSync(new URL('../app/assets/data/yout
 const safety2024General = JSON.parse(fs.readFileSync(new URL('../app/assets/data/safety2024general.json', import.meta.url)))
 const safety2024Coal = JSON.parse(fs.readFileSync(new URL('../app/assets/data/safety2024coal.json', import.meta.url)))
 const regulations = JSON.parse(fs.readFileSync(new URL('../app/assets/data/regulations.json', import.meta.url)))
-const allBanks = [exam0828, safetyWeek2, youthTheory2, safety2024General, safety2024Coal]
+const safetyWeek3 = JSON.parse(fs.readFileSync(new URL("../app/assets/data/safety-week3.json", import.meta.url)))
+const allBanks = [exam0828, safetyWeek2, safetyWeek3, youthTheory2, safety2024General, safety2024Coal]
 const embeddedWindow = {}
 vm.runInNewContext(fs.readFileSync(new URL('../app/banks-data.js', import.meta.url), 'utf8'), { window: embeddedWindow })
 vm.runInNewContext(fs.readFileSync(new URL('../app/regulations-data.js', import.meta.url), 'utf8'), { window: embeddedWindow })
@@ -55,6 +56,21 @@ assert.equal(safetyWeek2.questions[42].answer, 'C')
 assert.deepEqual(safetyWeek2.questions[42].options.map(option => option.key), ['A', 'B', 'C', 'D'])
 assert.equal(safetyWeek2.questions[89].answer, '防护装置')
 assert.equal(safetyWeek2.questions[268].answer, '对')
+assert.equal(safetyWeek3.title, '第三周安规考试')
+assert.equal(safetyWeek3.questionCount, 270)
+assert.equal(safetyWeek3.questions.length, 270)
+assert.equal(safetyWeek3.chapters.length, 18)
+for (const chapter of safetyWeek3.chapters) {
+  const questions = safetyWeek3.questions.filter(q => q.chapter === chapter)
+  assert.deepEqual(Object.fromEntries(['single', 'fill', 'judge'].map(type =>
+    [type, questions.filter(q => q.type === type).length])), { single: 5, fill: 5, judge: 5 })
+}
+assert.equal(safetyWeek3.questions[0].answer, 'B')
+assert.equal(safetyWeek3.questions[38].answer, '三分之二')
+assert.equal(safetyWeek3.questions[143].answer, '1.5')
+assert.equal(safetyWeek3.questions[147].answer, '对')
+assert.equal(safetyWeek3.questions[264].answer, '手套')
+assert.equal(safetyWeek3.questions[269].answer, '对')
 assert.equal(youthTheory2.questionCount, 580)
 assert.equal(youthTheory2.questions.length, 580)
 assert.equal(new Set(youthTheory2.questions.map(q => q.id)).size, 580)
@@ -85,7 +101,7 @@ assert.equal(safety2024General.chapters.length, 24)
 assert.equal(safety2024Coal.questionCount, 3207)
 assert.equal(safety2024Coal.questions.length, 3207)
 assert.equal(safety2024Coal.chapters.length, 11)
-assert.equal(new Set(allBanks.flatMap(bank => bank.questions.map(question => question.id))).size, 6588)
+assert.equal(new Set(allBanks.flatMap(bank => bank.questions.map(question => question.id))).size, 6858)
 
 for (const bank of allBanks) {
   const grouped = ['choice', 'fill', 'judge'].flatMap(group => bank.questions.filter(question => matchesQuestionGroup(question.type, group)))
@@ -158,4 +174,4 @@ assert.equal(findRegulationMatches(safetyWeek2.questions[0], 'safetyweek2', regu
 assert.equal(findRegulationMatches(exam0828.questions[0], 'exam0828', regulations, 3)[0].ref, '3.9')
 assert.deepEqual(findRegulationMatches(youthTheory2.questions[0], 'youththeory2', regulations, 3), [])
 
-console.log('All tests passed: 5 independent banks, 6588 questions, and 2 offline regulation sources validated.')
+console.log('All tests passed: 6 independent banks, 6858 questions, and 2 offline regulation sources validated.')
