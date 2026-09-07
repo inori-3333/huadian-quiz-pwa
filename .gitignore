@@ -4,6 +4,9 @@ dist/
 Thumbs.db
 android-app/.gradle/
 android-app/app/build/
+android-app/local.properties
+*.jks
+*.keystore
 outputs/
 output/playwright/
 .playwright-cli/

@@ -64,6 +64,20 @@ npm run dev
 
 ## 部署
 
+### 本机 Android APK 构建
+
+开发环境使用 JDK 17、Gradle Wrapper 8.9、Android SDK Platform 35、Build Tools 34.0.0 和 Platform Tools。macOS 的 SDK 路径为 `~/Library/Android/sdk`。
+
+```bash
+npm run build:apk
+```
+
+命令会重新嵌入题库、运行测试、编译 release APK、执行 Android Lint、签名并验证产物。APK 输出至 `outputs/android/huadian-quiz-1.6.4.apk`。
+
+构建默认使用 `~/.android/huadian-quiz/debug.keystore`、密码文件 `legacy-debug-password` 和别名 `androiddebugkey`。该密钥已与旧版 1.6.3 APK 核对一致；公开证书指纹固定在 `android-app/signing-certificate.sha256`，缺少密钥或签名不一致时会在编译前停止。请妥善备份密钥和密码文件，它们不进入 Git。此前本机新生成的 `release.jks` 与旧版不兼容，不再用于构建。
+
+升级前可执行 `npm run build:apk -- --previous-apk /path/to/old.apk`，签名不一致时会在编译前停止。使用找回的旧密钥时追加 `--keystore /path/to/release.jks --password-file /path/to/password-file --alias original-alias`。只检查证书、不构建时追加 `--check-signing`。旧 APK 只能用来核对证书，不能从中恢复私钥。
+
 `.github/workflows/pages.yml` 在 `main` 分支更新后自动部署，也支持手动运行。仓库的 Pages 来源设为 **GitHub Actions**。
 
 发布流程会重新从 `app/assets/data/` 嵌入最新题库和安规数据，构建 `dist/`，运行题库、判题和离线缓存检查，全部通过后再上传到 Pages。缓存版本根据资源内容自动生成；所有路径均相对于项目目录，可部署在 `/huadian-quiz-pwa/` 子路径下。
@@ -85,4 +99,4 @@ python scripts/parse_safety_regulations.py --general "通用要求.docx" --coal 
 python scripts/embed_banks.py
 ```
 
-版本：1.6.2；题库：安规考试 8.28（270 题）、第2周安规考试题库（269 题）、第三周安规考试（270 题）、青年理论知识网络学习竞赛题库第二期（580 题）、2024 版安规题库·通用部分（2262 题）、2024 版安规题库·燃煤发电部分（3207 题），共 6858 题；另内置两本 2024 版安规作为离线原文检索来源。
+版本：1.6.4；题库：安规考试 8.28（270 题）、第2周安规考试题库（269 题）、第三周安规考试（270 题）、青年理论知识网络学习竞赛题库第二期（580 题）、2024 版安规题库·通用部分（2262 题）、2024 版安规题库·燃煤发电部分（3207 题），共 6858 题；另内置两本 2024 版安规作为离线原文检索来源。

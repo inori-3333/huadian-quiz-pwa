@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 import struct
 import zipfile
 
@@ -26,16 +27,25 @@ def string_pool(data: bytes) -> tuple[dict[int, str], int]:
     kind, header_size, size = struct.unpack_from("<HHI", data, offset)
     assert kind == 1
     count, _styles, flags, start, _style_start = struct.unpack_from("<IIIII", data, offset + 8)
-    assert not flags & 0x100
+    utf8 = bool(flags & 0x100)
     offsets = offset + header_size
     strings = offset + start
     values = {}
     for index in range(count):
         cursor = strings + struct.unpack_from("<I", data, offsets + index * 4)[0]
-        length = struct.unpack_from("<H", data, cursor)[0]
-        assert not length & 0x8000
-        cursor += 2
-        values[index] = data[cursor:cursor + length * 2].decode("utf-16le")
+        if utf8:
+            cursor += 2 if data[cursor] & 0x80 else 1
+            length = data[cursor]
+            cursor += 1
+            if length & 0x80:
+                length = ((length & 0x7f) << 8) | data[cursor]
+                cursor += 1
+            values[index] = data[cursor:cursor + length].decode("utf-8")
+        else:
+            length = struct.unpack_from("<H", data, cursor)[0]
+            assert not length & 0x8000
+            cursor += 2
+            values[index] = data[cursor:cursor + length * 2].decode("utf-16le")
     return values, offset + size
 
 
@@ -56,7 +66,10 @@ def manifest_facts(data: bytes) -> tuple[list[str], dict[str, tuple[int, int, st
                 name = strings[struct.unpack_from("<I", data, item + 4)[0]]
                 raw_index = struct.unpack_from("<I", data, item + 8)[0]
                 raw = None if raw_index == 0xFFFFFFFF else strings[raw_index]
-                attributes[name] = (data[item + 15], struct.unpack_from("<I", data, item + 16)[0], raw)
+                value = struct.unpack_from("<I", data, item + 16)[0]
+                if raw is None and data[item + 15] == 3:
+                    raw = strings[value]
+                attributes[name] = (data[item + 15], value, raw)
         cursor += size
     return elements, attributes
 
@@ -75,19 +88,25 @@ def main() -> None:
             "assets/regulations-data.js",
             "assets/assets/data/exam0828.json",
             "assets/assets/data/safety-week2.json",
+            "assets/assets/data/safety-week3.json",
             "assets/assets/data/youth-theory-2.json",
             "assets/assets/data/safety2024general.json",
             "assets/assets/data/safety2024coal.json",
             "assets/assets/data/regulations.json",
         }
         assert required <= names, required - names
+        source = Path(__file__).resolve().parents[1] / "app"
+        for path in source.rglob("*"):
+            if path.is_file() and not path.name.startswith("."):
+                asset = "assets/" + path.relative_to(source).as_posix()
+                assert apk.read(asset) == path.read_bytes(), f"APK contains a stale asset: {asset}"
         assert "assets/assets/data/safety.json" not in names
         assert "assets/assets/data/theory.json" not in names
         elements, attrs = manifest_facts(apk.read("AndroidManifest.xml"))
         assert "uses-permission" not in elements
         assert attrs["package"][2] == "com.inori.hdquizstudy"
-        assert attrs["versionCode"][1] == 10602
-        assert attrs["versionName"][2] == "1.6.2"
+        assert attrs["versionCode"][1] == 10604
+        assert attrs["versionName"][2] == "1.6.4"
         assert attrs["label"][2] == "华电离线刷题库"
         assert attrs["name"][2] in {"com.inori.hdquizstudy.StudyView", "android.intent.category.LAUNCHER"}
         assert attrs["usesCleartextTraffic"][1] == 0
@@ -117,6 +136,13 @@ def main() -> None:
         assert safety_week_2["questions"][42]["answer"] == "C"
         assert safety_week_2["questions"][89]["answer"] == "防护装置"
         assert safety_week_2["questions"][268]["answer"] == "对"
+        safety_week_3 = json.loads(apk.read("assets/assets/data/safety-week3.json"))
+        assert safety_week_3["title"] == "第三周安规考试"
+        assert len(safety_week_3["questions"]) == 270
+        assert len(safety_week_3["chapters"]) == 18
+        for chapter in safety_week_3["chapters"]:
+            for kind in ("single", "fill", "judge"):
+                assert sum(q["chapter"] == chapter and q["type"] == kind for q in safety_week_3["questions"]) == 5
         youth_theory_2 = json.loads(apk.read("assets/assets/data/youth-theory-2.json"))
         assert len(youth_theory_2["questions"]) == 580
         assert youth_theory_2["title"] == "青年理论知识网络学习竞赛题库（第二期）"
@@ -160,6 +186,7 @@ def main() -> None:
         assert b'"id":"safety2024general"' in embedded
         assert b'"id":"safety2024coal"' in embedded
         assert b'"id":"safetyweek2"' in embedded
+        assert b'"id":"safetyweek3"' in embedded
         assert regulation_embedded.startswith(b'// Generated by scripts/embed_banks.py')
         assert b'"standard":"Q/CHD 85.1' in regulation_embedded
         assert b'"standard":"Q/CHD 85.2' in regulation_embedded
@@ -169,7 +196,7 @@ def main() -> None:
         assert any(entry["source"] == "coal" and entry["ref"] == "4.1.1" for entry in regulations["clauses"])
         assert b"bankId === 'youththeory2'" in core_js
         assert '安规原文依据'.encode() in main_js
-    print("Clean APK verified: zero permissions, five banks, 6588 questions, and two offline regulation sources.")
+    print("Clean APK verified: zero permissions, six banks, 6858 questions, and two offline regulation sources.")
 
 
 if __name__ == "__main__":
