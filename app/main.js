@@ -27,7 +27,9 @@ const progress = stored.progress || {}
 const edits = stored.edits || {}
 const resumeSessions = stored.resumeSessions || {}
 const examSessions = stored.examSessions || {}
-let swipeGuideDismissed = stored.swipeGuideDismissed === true
+// Change this only when publishing a new announcement, independently of app releases.
+const ANNOUNCEMENT_VERSION = 'group-15-2026-09'
+let dismissedAnnouncementVersion = stored.dismissedAnnouncementVersion || null
 let currentBankId = stored.currentBankId || null
 
 function loadStoredState() {
@@ -40,7 +42,7 @@ function loadStoredState() {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, swipeGuideDismissed }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, dismissedAnnouncementVersion }))
     return true
   } catch {
     if (!storageWarningShown) showToast('浏览器无法保存进度，请允许本站使用本地存储')
@@ -134,11 +136,11 @@ function showToast(message) {
   toastTimer = setTimeout(() => toastNode.classList.remove('show'), 1700)
 }
 
-function showSwipeGuide() {
-  if (swipeGuideDismissed || !['home', 'dashboard'].includes(currentView)) return
+function showAnnouncement() {
+  if (dismissedAnnouncementVersion === ANNOUNCEMENT_VERSION || !['home', 'dashboard'].includes(currentView)) return
   const previousFocus = document.activeElement
   const close = () => {
-    swipeGuideDismissed = true
+    dismissedAnnouncementVersion = ANNOUNCEMENT_VERSION
     saveState()
     modalRoot.innerHTML = ''
     previousFocus?.focus()
@@ -828,7 +830,7 @@ function boot() {
     currentView = currentBankId ? 'dashboard' : 'home'
     saveState()
     render()
-    showSwipeGuide()
+    showAnnouncement()
   } catch (error) {
     console.error(error)
     app.innerHTML = '<section class="empty-state"><div class="empty-icon">!</div><h2>题库加载失败</h2></section>'

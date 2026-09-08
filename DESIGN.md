@@ -52,7 +52,7 @@ components:
 
 ## Components
 
-首次弹窗由 app/main.js 的 showSwipeGuide 管理，复用 modal-head、modal-close、primary-button。保留现有 swipeGuideDismissed 存储语义，已关闭的安装不再次展示。确认、关闭、Escape 和遮罩点击均关闭并持久化；Tab 在两个操作间循环并恢复先前焦点。
+首次弹窗由 app/main.js 的 showAnnouncement 管理，复用 modal-head、modal-close、primary-button。公告以 ANNOUNCEMENT_VERSION 独立标识，dismissedAnnouncementVersion 只记录已关闭的公告版本；忽略旧 swipeGuideDismissed，升级用户也展示新公告一次。应用版本升级本身不重置公告，只有发布新公告时才修改公告标记。确认、关闭、Escape 和遮罩点击均关闭并持久化；Tab 在两个操作间循环并恢复先前焦点。
 
 按钮保留清晰 hover、active 与 focus-visible。首次弹窗不增加动画，中文更新说明使用短句。其他操作和题库内容不因公告改动而改变。
 

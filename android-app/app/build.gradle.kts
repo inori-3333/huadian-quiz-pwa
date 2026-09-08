@@ -10,8 +10,8 @@ android {
         applicationId = "com.inori.hdquizstudy"
         minSdk = 23
         targetSdk = 35
-        versionCode = 10606
-        versionName = "1.6.6"
+        versionCode = 10607
+        versionName = "1.6.7"
     }
 
     sourceSets {

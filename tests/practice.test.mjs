@@ -5,28 +5,33 @@ assert.equal(app.dataset.view, 'home')
 assert.match(modal.innerHTML, /Powered by Group 15/)
 modal.querySelector('.modal-done').handlers.get('click')()
 assert.equal(modal.innerHTML, '')
-assert.equal(JSON.parse(storage.get('huadian-quiz-state-v1')).swipeGuideDismissed, true)
-run("selectBank('safetyweek2'); navigate('home'); showSwipeGuide()")
+assert.equal(JSON.parse(storage.get('huadian-quiz-state-v1')).dismissedAnnouncementVersion, run('ANNOUNCEMENT_VERSION'))
+run("selectBank('safetyweek2'); navigate('home'); showAnnouncement()")
 assert.equal(modal.innerHTML, '', 'Navigating back home must not repeat a dismissed guide')
 assert.equal(createApplication(storage).modal.innerHTML, '', 'Dismissal must survive a full app restart')
 
-// Existing installs without the new flag get the guide on their saved bank's
-// home screen. Every way to dismiss it must preserve progress and stay dismissed.
-for (const method of ['close', 'escape', 'backdrop']) {
-  const oldState = { currentBankId: 'safetyweek2', progress: { saved: { attempts: 3, favorite: true } }, edits: {}, resumeSessions: {} }
-  const upgradeStorage = new Map([['huadian-quiz-state-v1', JSON.stringify(oldState)]])
-  const upgraded = createApplication(upgradeStorage)
-  assert.equal(upgraded.app.dataset.view, 'dashboard')
-  assert.match(upgraded.modal.innerHTML, /swipe-guide/)
-  if (method === 'close') upgraded.modal.querySelector('.modal-close').handlers.get('click')()
-  else if (method === 'escape') upgraded.modal.querySelector('.modal').handlers.get('keydown')({ key: 'Escape', preventDefault() {} })
-  else {
-    const backdrop = upgraded.modal.querySelector('.modal-backdrop')
-    backdrop.handlers.get('click')({ target: backdrop, currentTarget: backdrop })
+// Legacy guide dismissal and earlier announcements must never hide a new announcement.
+// Every close path preserves learning data and persists only the current announcement.
+for (const previous of [{}, { swipeGuideDismissed: true }, { dismissedAnnouncementVersion: 'older-announcement' }]) {
+  for (const method of ['done', 'close', 'escape', 'backdrop']) {
+    const oldState = { ...previous, currentBankId: 'safetyweek2', progress: { saved: { attempts: 3, favorite: true } }, edits: { saved: { answer: 'A' } }, resumeSessions: { saved: { index: 2 } }, examSessions: { saved: { index: 3 } } }
+    const upgradeStorage = new Map([['huadian-quiz-state-v1', JSON.stringify(oldState)]])
+    const upgraded = createApplication(upgradeStorage)
+    assert.equal(upgraded.app.dataset.view, 'dashboard')
+    assert.match(upgraded.modal.innerHTML, /swipe-guide/)
+    if (method === 'done') upgraded.modal.querySelector('.modal-done').handlers.get('click')()
+    else if (method === 'close') upgraded.modal.querySelector('.modal-close').handlers.get('click')()
+    else if (method === 'escape') upgraded.modal.querySelector('.modal').handlers.get('keydown')({ key: 'Escape', preventDefault() {} })
+    else {
+      const backdrop = upgraded.modal.querySelector('.modal-backdrop')
+      backdrop.handlers.get('click')({ target: backdrop, currentTarget: backdrop })
+    }
+    assert.equal(upgraded.modal.innerHTML, '')
+    const savedState = JSON.parse(upgradeStorage.get('huadian-quiz-state-v1'))
+    for (const key of ['progress', 'edits', 'resumeSessions', 'examSessions']) assert.deepEqual(savedState[key], oldState[key])
+    assert.equal(savedState.dismissedAnnouncementVersion, run('ANNOUNCEMENT_VERSION'))
+    assert.equal(createApplication(upgradeStorage).modal.innerHTML, '', `${method} dismissal must survive restart`)
   }
-  assert.equal(upgraded.modal.innerHTML, '')
-  assert.deepEqual(JSON.parse(upgradeStorage.get('huadian-quiz-state-v1')).progress, oldState.progress)
-  assert.equal(createApplication(upgradeStorage).modal.innerHTML, '', `${method} dismissal must survive restart`)
 }
 const flushAdvance = () => {
   const index = timers.findIndex(timer => timer.delay === 400 && !timer.cancelled)
