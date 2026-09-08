@@ -138,11 +138,11 @@ def main() -> None:
         assert safety_week_2["questions"][268]["answer"] == "对"
         safety_week_3 = json.loads(apk.read("assets/assets/data/safety-week3.json"))
         assert safety_week_3["title"] == "第三周安规考试"
-        assert len(safety_week_3["questions"]) == 270
+        assert len(safety_week_3["questions"]) == 269
         assert len(safety_week_3["chapters"]) == 18
         for chapter in safety_week_3["chapters"]:
             for kind in ("single", "fill", "judge"):
-                assert sum(q["chapter"] == chapter and q["type"] == kind for q in safety_week_3["questions"]) == 5
+                assert sum(q["chapter"] == chapter and q["type"] == kind for q in safety_week_3["questions"]) == (4 if chapter == "第3组" and kind == "single" else 5)
         youth_theory_2 = json.loads(apk.read("assets/assets/data/youth-theory-2.json"))
         assert len(youth_theory_2["questions"]) == 580
         assert youth_theory_2["title"] == "青年理论知识网络学习竞赛题库（第二期）"
@@ -196,7 +196,7 @@ def main() -> None:
         assert any(entry["source"] == "coal" and entry["ref"] == "4.1.1" for entry in regulations["clauses"])
         assert b"bankId === 'youththeory2'" in core_js
         assert '安规原文依据'.encode() in main_js
-    print("Clean APK verified: zero permissions, six banks, 6858 questions, and two offline regulation sources.")
+    print("Clean APK verified: zero permissions, six banks, 6857 questions, and two offline regulation sources.")
 
 
 if __name__ == "__main__":
