@@ -65,7 +65,7 @@ await lifecycle('message', { type: 'SKIP_WAITING' })
 assert.ok(skipped)
 
 networkAvailable = false
-for (const asset of ['?installed=1', 'index.html', 'main.js', 'pwa.js', 'banks-data.js', 'regulations-data.js', 'styles.css?version=2']) {
+for (const asset of ['?installed=1', 'index.html', 'main.js', 'pwa.js', 'banks-data.js', 'regulations-data.js', 'styles.css?version=2', 'assets/group-15.jpg']) {
   assert.equal((await fetchEvent(asset)).status, 200, `Cannot use ${asset} offline`)
 }
 assert.equal(await (await fetchEvent('some-page', 'navigate')).text(), `${scope}index.html`)

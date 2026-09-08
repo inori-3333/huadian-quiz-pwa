@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createApplication } from './helpers/application.mjs'
 const { document, app, modal, timers, storage, run, plain } = createApplication()
 assert.equal(app.dataset.view, 'home')
-assert.match(modal.innerHTML, /右滑，回看上一题/)
+assert.match(modal.innerHTML, /Powered by Group 15/)
 modal.querySelector('.modal-done').handlers.get('click')()
 assert.equal(modal.innerHTML, '')
 assert.equal(JSON.parse(storage.get('huadian-quiz-state-v1')).swipeGuideDismissed, true)

@@ -144,10 +144,11 @@ function showSwipeGuide() {
     previousFocus?.focus()
   }
   modalRoot.innerHTML = `<div class="modal-backdrop swipe-guide-backdrop"><section class="modal swipe-guide" role="dialog" aria-modal="true" aria-labelledby="swipe-guide-title" aria-describedby="swipe-guide-copy">
-    <div class="modal-head"><h2 id="swipe-guide-title">右滑，回看上一题</h2><button class="modal-close" type="button" aria-label="关闭提示">×</button></div>
-    <div id="swipe-guide-copy">
-      <p>刷题时向右滑动，即可查看刚才的答题；向左滑动，返回后面的题目。</p>
-      <p>回看时，答对的题也会显示对应的安规条文。</p>
+    <div class="modal-head"><h2 id="swipe-guide-title">Powered by Group 15</h2><button class="modal-close" type="button" aria-label="关闭更新说明">×</button></div>
+    <img class="welcome-art" src="assets/group-15.jpg" width="1448" height="1448" alt="绿色森林中淋着水的黑猫插画">
+    <div id="swipe-guide-copy" class="welcome-updates">
+      <h3>本次更新</h3>
+      <ul><li>第三周安规考试题库已更新至最终版。</li><li>优化了安规原文的匹配。</li></ul>
     </div>
     <button class="primary-button full-button modal-done" type="button">知道了</button>
   </section></div>`
