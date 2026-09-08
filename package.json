@@ -1,14 +1,14 @@
 {
   "name": "huadian-quiz-app",
-  "version": "1.6.4",
+  "version": "1.6.5",
   "private": true,
   "type": "module",
   "scripts": {
     "build:apk": "python3 scripts/build_android.py",
     "dev": "python -m http.server 8080 --directory app",
-    "embed-banks": "python scripts/embed_banks.py",
+    "embed-banks": "python3 scripts/embed_banks.py",
     "build": "npm run embed-banks && node scripts/build_pwa.mjs",
     "preview": "python -m http.server 8080 --directory dist",
-    "test": "node tests/app.test.mjs && node tests/practice.test.mjs && node tests/exam.test.mjs && node tests/pwa.test.mjs"
+    "test": "python3 tests/regulations_import.test.py && node tests/app.test.mjs && node tests/practice.test.mjs && node tests/exam.test.mjs && node tests/pwa.test.mjs"
   }
 }

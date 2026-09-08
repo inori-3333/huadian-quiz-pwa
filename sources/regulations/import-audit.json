@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "status": "verified_text_coverage",
+      "source": "general",
+      "sha256": "e7d7d9f843881b1494725a1e6e323e05e6860b50a039586a4b2aea52b7cff536",
+      "bodyParagraphs": 2579,
+      "tableBlocks": 47,
+      "tableCells": 1473,
+      "checkedTextUnits": 4052,
+      "missingTextUnits": 0,
+      "recordCount": 2010
+    },
+    {
+      "source": "coal",
+      "status": "preserved_without_source_audit"
+    }
+  ]
+}

@@ -72,7 +72,7 @@ npm run dev
 npm run build:apk
 ```
 
-命令会重新嵌入题库、运行测试、编译 release APK、执行 Android Lint、签名并验证产物。APK 输出至 `outputs/android/huadian-quiz-1.6.4.apk`。
+命令会重新嵌入题库、运行测试、编译 release APK、执行 Android Lint、签名并验证产物。APK 输出至 `outputs/android/huadian-quiz-1.6.5.apk`。
 
 构建默认使用 `~/.android/huadian-quiz/debug.keystore`、密码文件 `legacy-debug-password` 和别名 `androiddebugkey`。该密钥已与旧版 1.6.3 APK 核对一致；公开证书指纹固定在 `android-app/signing-certificate.sha256`，缺少密钥或签名不一致时会在编译前停止。请妥善备份密钥和密码文件，它们不进入 Git。此前本机新生成的 `release.jks` 与旧版不兼容，不再用于构建。
 
@@ -92,11 +92,19 @@ npm run build:apk
 
 ## 更新安规检索来源
 
-两本安规以只读检索数据导入，不会出现在题库列表中。更新来源文件时执行：
+两本安规以只读检索数据导入，不会出现在题库列表中。通用部分 Word 原件仅在本地 `sources/regulations/` 保存，已加入 Git 忽略规则，不上传 GitHub。持有原件时可重复核验、重新导入：
 
 ```bash
-python scripts/parse_safety_regulations.py --general "通用要求.docx" --coal "燃煤发电.docx"
-python scripts/embed_banks.py
+python3 scripts/parse_safety_regulations.py --general "sources/regulations/电力安全工作规程 第一部分：通用要求.docx"
+python3 scripts/embed_banks.py
+npm test
+npm run build
 ```
 
-版本：1.6.4；题库：安规考试 8.28（270 题）、第2周安规考试题库（269 题）、第三周安规考试（269 题）、青年理论知识网络学习竞赛题库第二期（580 题）、2024 版安规题库·通用部分（2262 题）、2024 版安规题库·燃煤发电部分（3207 题），共 6857 题；另内置两本 2024 版安规作为离线原文检索来源。
+只提供 `--general` 时，保留已有燃煤数据；取得燃煤 Word 后，使用 `--coal "燃煤发电.docx"` 更新，也可以同时提供两份文件。未提供源文件的部分会在 `sources/regulations/import-audit.json` 中标明未核验，不能视为完成全量校验。
+
+导入器保留跨页续文、数字/单位换行、附录以及表格首行和正文包装节点；写入前对所有非页眉页码的正文段落及表格单元进行文本覆盖校验，有缺失即报错。审计文件记录源文件 SHA-256 和检查数量。`npm test` 始终检查导入器回归、已入库关键条款及气瓶仓库温度题的三种题型匹配；本地存在 Word 时额外重新提取并核对全部通用记录，CI 没有原件时明确跳过该项。
+
+完整性校验针对 Word 中可提取的文字，不包含图片内的文字识别或图形内容；原始图示、版式以保留的 Word 为准。
+
+版本：1.6.5；题库：安规考试 8.28（270 题）、第2周安规考试题库（269 题）、第三周安规考试（269 题）、青年理论知识网络学习竞赛题库第二期（580 题）、2024 版安规题库·通用部分（2262 题）、2024 版安规题库·燃煤发电部分（3207 题），共 6857 题；另内置两本 2024 版安规作为离线原文检索来源。

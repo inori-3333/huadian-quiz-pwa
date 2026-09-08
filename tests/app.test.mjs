@@ -172,6 +172,13 @@ assert.equal(findRegulationMatches(safety2024General.questions[0], 'safety2024ge
 assert.equal(findRegulationMatches(safety2024Coal.questions[0], 'safety2024coal', regulations, 3)[0].ref, '4.1.1')
 assert.equal(findRegulationMatches(safetyWeek2.questions[0], 'safetyweek2', regulations, 3)[0].ref, '8.2.1')
 assert.equal(findRegulationMatches(exam0828.questions[0], 'exam0828', regulations, 3)[0].ref, '3.9')
+for (const id of ['safetyweek3-0019', 'safetyweek3-0025', 'safetyweek3-0029']) {
+  const question = safetyWeek3.questions.find(question => question.id === id)
+  const match = findRegulationMatches(question, 'safetyweek3', regulations, 3)[0]
+  assert.equal(match.source, 'general')
+  assert.equal(match.ref, '12.3.1')
+  assert.ok(match.text.includes('40°C。不得有取暖设备。'))
+}
 assert.deepEqual(findRegulationMatches(youthTheory2.questions[0], 'youththeory2', regulations, 3), [])
 
 console.log('All tests passed: 6 independent banks, 6857 questions, and 2 offline regulation sources validated.')
