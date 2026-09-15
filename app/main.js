@@ -1,4 +1,4 @@
-const { isCorrectAnswer, normalizeChoice, usesImmediateSubmission, matchesQuestionGroup, normalizeQuestionProgress, recordQuestionResult, createResumeSnapshot, isResumeAvailable, shuffled, findRegulationMatches } = globalThis.QuizCore
+const { isCorrectAnswer, normalizeChoice, usesImmediateSubmission, matchesQuestionGroup, normalizeQuestionProgress, recordQuestionResult, createResumeSnapshot, isResumeAvailable, shuffled, findRegulationMatches, searchRegulations } = globalThis.QuizCore
 
 const STORAGE_KEY = 'huadian-quiz-state-v1'
 const CORRECT_FEEDBACK_DELAY_MS = 400
@@ -18,6 +18,7 @@ let regulationData = { sources: [], clauses: [] }
 let currentView = 'home'
 let historyStack = []
 let listState = { mode: 'library', query: '', chapter: 'all', limit: 60, wrongGroup: 'current' }
+let regulationSearchState = { query: '', source: 'all', limit: 30 }
 let session = null
 let toastTimer = null
 let storageWarningShown = false
@@ -30,6 +31,7 @@ const examSessions = stored.examSessions || {}
 // Change this only when publishing a new announcement, independently of app releases.
 const ANNOUNCEMENT_VERSION = 'group-15-2026-09'
 let dismissedAnnouncementVersion = stored.dismissedAnnouncementVersion || null
+let shortAnswerNoticeDismissed = stored.shortAnswerNoticeDismissed === true
 let currentBankId = stored.currentBankId || null
 
 function loadStoredState() {
@@ -42,7 +44,7 @@ function loadStoredState() {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, dismissedAnnouncementVersion }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, dismissedAnnouncementVersion, shortAnswerNoticeDismissed }))
     return true
   } catch {
     if (!storageWarningShown) showToast('浏览器无法保存进度，请允许本站使用本地存储')
@@ -136,24 +138,23 @@ function showToast(message) {
   toastTimer = setTimeout(() => toastNode.classList.remove('show'), 1700)
 }
 
-function showAnnouncement() {
-  if (dismissedAnnouncementVersion === ANNOUNCEMENT_VERSION || !['home', 'dashboard'].includes(currentView)) return
-  const previousFocus = document.activeElement
+function showReadingNotice({ id, title, content, closeLabel, doneLabel, onClose, restoreFocus = document.activeElement }) {
+  const background = ['#app', '#topbar', '#bottom-nav', '#update-notice'].map(selector => document.querySelector(selector))
+  const inertBefore = background.map(element => element.inert)
   const close = () => {
-    dismissedAnnouncementVersion = ANNOUNCEMENT_VERSION
-    saveState()
+    onClose()
     modalRoot.innerHTML = ''
-    previousFocus?.focus()
+    background.forEach((element, index) => { element.inert = inertBefore[index] })
+    document.body.classList.remove('reading-notice-open')
+    restoreFocus?.focus()
   }
-  modalRoot.innerHTML = `<div class="modal-backdrop swipe-guide-backdrop"><section class="modal swipe-guide" role="dialog" aria-modal="true" aria-labelledby="swipe-guide-title" aria-describedby="swipe-guide-copy">
-    <div class="modal-head"><h2 id="swipe-guide-title">Powered by Group 15</h2><button class="modal-close" type="button" aria-label="关闭更新说明">×</button></div>
-    <img class="welcome-art" src="assets/group-15.jpg" width="1448" height="1448" alt="绿色森林中淋着水的黑猫插画">
-    <div id="swipe-guide-copy" class="welcome-updates">
-      <h3>本次更新</h3>
-      <ul><li>第三周安规考试题库已更新至最终版。</li><li>优化了安规原文的匹配。</li></ul>
-    </div>
-    <button class="primary-button full-button modal-done" type="button">知道了</button>
+  modalRoot.innerHTML = `<div class="modal-backdrop swipe-guide-backdrop"><section class="modal swipe-guide" role="dialog" aria-modal="true" aria-labelledby="${id}-title" aria-describedby="${id}-copy">
+    <div class="modal-head"><h2 id="${id}-title">${esc(title)}</h2><button class="modal-close" type="button" aria-label="${esc(closeLabel)}">×</button></div>
+    ${content}
+    <button class="primary-button full-button modal-done" type="button">${esc(doneLabel)}</button>
   </section></div>`
+  background.forEach(element => { element.inert = true })
+  document.body.classList.add('reading-notice-open')
   const first = modalRoot.querySelector('.modal-close')
   const last = modalRoot.querySelector('.modal-done')
   first.addEventListener('click', close)
@@ -169,7 +170,25 @@ function showAnnouncement() {
   first.focus()
 }
 
+function showAnnouncement() {
+  if (dismissedAnnouncementVersion === ANNOUNCEMENT_VERSION || !['home', 'dashboard'].includes(currentView)) return
+  showReadingNotice({
+    id: 'swipe-guide', title: 'Powered by Group 15', closeLabel: '关闭更新说明', doneLabel: '知道了',
+    content: `
+    <img class="welcome-art" src="assets/group-15.jpg" width="1448" height="1448" alt="绿色森林中淋着水的黑猫插画">
+    <div id="swipe-guide-copy" class="welcome-updates">
+      <h3>本次更新</h3>
+      <ul><li>第三周安规考试题库已更新至最终版。</li><li>优化了安规原文的匹配。</li></ul>
+    </div>`,
+    onClose: () => {
+      dismissedAnnouncementVersion = ANNOUNCEMENT_VERSION
+      saveState()
+    }
+  })
+}
+
 function setHeader(title, subtitle = '', { back = false, switcher = false } = {}) {
+  document.title = title === '华电刷题' ? title : `${title} — 华电刷题`
   pageTitle.textContent = title
   pageTitle.title = title
   pageSubtitle.textContent = subtitle
@@ -209,6 +228,8 @@ function render() {
   if (currentView === 'home') renderHome()
   else if (currentView === 'dashboard') renderDashboard()
   else if (['library', 'wrong', 'favorite'].includes(currentView)) renderList(currentView)
+  else if (currentView === 'regulations') renderRegulationSearch()
+  else if (currentView === 'short-answers') renderShortAnswers()
   else if (currentView === 'practice') renderPractice()
   else if (currentView === 'exam-setup') renderExamSetup()
   else if (currentView === 'exam') renderExam()
@@ -218,9 +239,10 @@ function render() {
 
 function renderHome() {
   setHeader('华电刷题')
-  setBottomNav(false)
+  setBottomNav(true, 'dashboard')
   app.innerHTML = `
     <div class="library-heading"><div><h1>选择题库</h1><p>${banks.size} 个题库 · ${[...banks.values()].reduce((total, bank) => total + bank.questionCount, 0)} 道题</p></div><span>v${esc(document.querySelector('meta[name="app-version"]').content)}</span></div>
+    ${shortAnswerEntry()}
     <section class="bank-grid">
       ${[...banks.values()].map(bank => {
         const stats = statsFor(bank)
@@ -237,6 +259,7 @@ function renderHome() {
       }).join('')}
     </section>
     <p class="library-note">练习进度、错题与收藏保存在当前浏览器。离线就绪后，断网也能刷题和查看安规原文。</p>`
+  app.querySelector('[data-action="short-answers"]').addEventListener('click', openShortAnswers)
   app.querySelectorAll('[data-bank]').forEach(card => {
     card.addEventListener('click', () => selectBank(card.dataset.bank))
     card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectBank(card.dataset.bank) } })
@@ -257,6 +280,7 @@ function renderDashboard() {
       <div class="progress-track"><i style="width:${stats.percent}%"></i></div>
       <div class="progress-notes"><span>累计作答 ${stats.attempts} 次</span><span>历史错题 ${stats.wrongEver} 题</span><span>收藏 ${stats.favorite} 题</span></div>
     </section>
+    ${shortAnswerEntry()}
     <section class="action-grid">
       ${savedSession ? '<button class="action-card continue" data-action="continue"><span class="action-icon">▶</span><strong>继续刷题</strong></button>' : ''}
       ${bank.id !== 'youththeory2' ? '<button class="action-card" data-action="exam"><span class="action-icon">▤</span><strong>模拟安规考试</strong></button>' : ''}
@@ -268,6 +292,7 @@ function renderDashboard() {
       <button class="action-card" data-action="favorite"><span class="action-icon">★</span><strong>收藏练习</strong></button>
     </section>`
   app.querySelector('[data-action="continue"]')?.addEventListener('click', continueSession)
+  app.querySelector('[data-action="short-answers"]').addEventListener('click', openShortAnswers)
   app.querySelector('[data-action="exam"]')?.addEventListener('click', () => navigate('exam-setup'))
   app.querySelector('[data-action="sequence"]').addEventListener('click', () => startSession(questionsForBank().map(q => q.id), '顺序刷题'))
   app.querySelector('[data-action="start-at"]').addEventListener('click', openStartPicker)
@@ -275,6 +300,64 @@ function renderDashboard() {
   app.querySelector('[data-action="random"]').addEventListener('click', () => startSession(shuffled(questionsForBank().map(q => q.id)), '随机练习'))
   app.querySelector('[data-action="wrong"]').addEventListener('click', () => startFilteredSession('wrong'))
   app.querySelector('[data-action="favorite"]').addEventListener('click', () => startFilteredSession('favorite'))
+}
+
+function shortAnswerEntry() {
+  return `<button class="short-answer-entry" data-action="short-answers" type="button" aria-label="简答题...吗？">
+    <span><strong>简答题...吗？</strong><small>${window.SHORT_ANSWERS.length} 道预测 · 答案与安规原文</small></span><span aria-hidden="true">↗</span>
+  </button>`
+}
+
+function openShortAnswers() {
+  navigate('short-answers')
+  const heading = app.querySelector('#short-answer-heading')
+  heading.focus()
+  if (shortAnswerNoticeDismissed) return
+  showReadingNotice({
+    id: 'short-answer-notice', title: '先说在前面', closeLabel: '关闭复习提示', doneLabel: '知道了，开始复习',
+    content: `<div id="short-answer-notice-copy" class="short-answer-notice-copy"><p>接下来提供的全部内容<strong>仅供复习参考</strong>，不代表考试范围或出题承诺。</p><p class="short-answer-caution">可能一个都不考。</p><p>请结合完整安规复习，不要只依赖这些预测题。</p></div>`,
+    restoreFocus: heading,
+    onClose: () => { shortAnswerNoticeDismissed = true; saveState() }
+  })
+}
+
+function renderShortAnswers() {
+  setHeader('简答题...吗？', '复习参考', { back: true })
+  setBottomNav(true, 'dashboard')
+  const questions = window.SHORT_ANSWERS
+  const source = regulationData.sources.find(item => item.id === 'general')
+  app.innerHTML = `
+    <section class="short-answer-intro">
+      <h1 id="short-answer-heading" tabindex="-1">简答题...吗？</h1>
+      <p class="short-answer-reminder">仅供复习参考，可能一个都不考。</p>
+      <p>参考答案按要点整理；下方列出对应安规完整条文，复习时以原文为准。</p>
+    </section>
+    <details class="short-answer-contents"><summary>题目目录 · ${questions.length} 题</summary>
+      <nav aria-label="简答题目录">${questions.map(item => `<button type="button" data-short-answer-jump="${item.number}"><span>${item.number}.</span>${esc(item.question)}</button>`).join('')}</nav>
+    </details>
+    <div class="short-answer-list">${questions.map(item => `<article class="short-answer-card" aria-labelledby="short-answer-${item.number}">
+      <h2 id="short-answer-${item.number}" tabindex="-1"><span class="short-answer-number">${item.number}.</span> ${esc(item.question)}</h2>
+      <h3>参考答案</h3><div class="short-answer-copy">${item.answer.map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}</div>
+      <section class="short-answer-original" aria-label="第 ${item.number} 题对应安规原文">
+        <h3>对应安规原文</h3><p class="short-answer-source">${esc(source.title)} · ${esc(source.standard)}</p>
+        ${item.refs.map(ref => {
+          const clause = regulationData.clauses.find(entry => entry.source === source.id && entry.ref === ref && entry.kind === 'clause')
+          return `<div class="short-answer-clause"><h4>第 ${esc(ref)} 条</h4><div class="regulation-copy"><p>${esc(clause.text).replace(/ (?=[a-z]\) )/g, '\n')}</p></div></div>`
+        }).join('')}
+      </section>
+      <button class="tiny-button" type="button" data-short-answer-top>返回题目目录</button>
+    </article>`).join('')}</div>`
+  app.querySelectorAll('[data-short-answer-jump]').forEach(button => button.addEventListener('click', () => {
+    const target = app.querySelector(`#short-answer-${button.dataset.shortAnswerJump}`)
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({ block: 'start' })
+  }))
+  app.querySelectorAll('[data-short-answer-top]').forEach(button => button.addEventListener('click', () => {
+    const contents = app.querySelector('.short-answer-contents')
+    contents.open = true
+    contents.querySelector('summary').focus({ preventScroll: true })
+    contents.scrollIntoView({ block: 'start' })
+  }))
 }
 
 function openTypePicker() {
@@ -407,6 +490,90 @@ function updateListResults() {
   bindQuestionRows(target)
   target.querySelector('#practice-filtered')?.addEventListener('click', () => startSession(items.map(q => q.id), listState.mode === 'wrong' ? (listState.wrongGroup === 'history' ? '历史错题练习' : '待巩固重刷') : '收藏练习'))
   target.querySelector('#load-more')?.addEventListener('click', () => { listState.limit += 60; updateListResults() })
+}
+
+function renderRegulationSearch() {
+  setHeader('安规原文', '关键词检索 · 离线可用', { switcher: true })
+  setBottomNav(true, 'regulations')
+  app.innerHTML = `
+    <section class="regulation-search-intro">
+      <h1>查安规原文</h1><p>检索通用要求、燃煤发电两本 2024 版安规，无需先选题目。</p>
+    </section>
+    <form id="regulation-search-form" role="search" novalidate>
+      <label for="regulation-search">关键词或条款号</label>
+      <div class="regulation-search-field">
+        <input id="regulation-search" class="search" type="search" value="${esc(regulationSearchState.query)}" placeholder="例如：工作票、12.3.1" aria-describedby="regulation-search-help">
+        <button id="clear-regulation-search" class="icon-button" type="button" aria-label="清空安规搜索">×</button>
+      </div>
+      <p id="regulation-search-help" class="regulation-search-help">多个关键词用空格分隔，查找同时包含这些词的原文。</p>
+      <label for="regulation-source-filter">安规范围</label>
+      <select id="regulation-source-filter" class="filter-select">
+        <option value="all">全部安规</option>
+        ${regulationData.sources.map(source => `<option value="${esc(source.id)}" ${source.id === regulationSearchState.source ? 'selected' : ''}>${esc(source.title)}</option>`).join('')}
+      </select>
+    </form>
+    <p id="regulation-search-status" class="list-summary" role="status" aria-live="polite"></p>
+    <div id="regulation-search-results"></div>`
+  const input = app.querySelector('#regulation-search')
+  const clear = app.querySelector('#clear-regulation-search')
+  let composing = false
+  const search = () => {
+    regulationSearchState.query = input.value
+    regulationSearchState.limit = 30
+    updateRegulationSearchResults()
+  }
+  input.addEventListener('compositionstart', () => { composing = true })
+  input.addEventListener('compositionend', () => { composing = false; search() })
+  input.addEventListener('input', event => { if (!composing && !event.isComposing) search() })
+  app.querySelector('#regulation-search-form').addEventListener('submit', event => {
+    event.preventDefault()
+    if (!composing) search()
+  })
+  clear.addEventListener('click', () => { input.value = ''; search(); input.focus() })
+  app.querySelector('#regulation-source-filter').addEventListener('change', event => {
+    regulationSearchState.source = event.target.value
+    regulationSearchState.limit = 30
+    updateRegulationSearchResults()
+  })
+  updateRegulationSearchResults()
+}
+
+function highlightRegulationQuery(text) {
+  const terms = [...new Set(regulationSearchState.query.trim().split(/\s+/).filter(Boolean))].sort((a, b) => b.length - a.length)
+  if (!terms.length) return esc(text)
+  return String(text).split(new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi'))
+    .map((part, index) => index % 2 ? `<mark>${esc(part)}</mark>` : esc(part)).join('')
+}
+
+function updateRegulationSearchResults() {
+  const { query, source, limit } = regulationSearchState
+  const target = app.querySelector('#regulation-search-results')
+  const status = app.querySelector('#regulation-search-status')
+  app.querySelector('#clear-regulation-search').classList.toggle('hidden', !query)
+  const items = searchRegulations(query, regulationData, source)
+  status.textContent = query.trim() ? `找到 ${items.length} 条原文${items.length ? ` · 已显示 ${Math.min(limit, items.length)} 条` : ''}` : `已收录 ${regulationData.sources.length} 本安规 · ${regulationData.clauses.length} 条原文记录`
+  if (!query.trim() || !items.length) {
+    target.innerHTML = `<section class="empty-state"><div class="empty-icon" aria-hidden="true">▤</div><h2>${query.trim() ? '未找到相关原文' : '输入关键词，查找安规'}</h2><p>${query.trim() ? '试试缩短关键词、减少搜索词，或切换至全部安规。' : '支持搜索正文、条款号及表格内容。'}</p></section>`
+    return
+  }
+  const sources = new Map(regulationData.sources.map(item => [item.id, item]))
+  target.innerHTML = `<div class="regulation-search-list">${items.slice(0, limit).map(item => {
+    const book = sources.get(item.source)
+    const ref = item.kind === 'table' ? `表格 · ${item.ref}` : `第 ${item.ref} 条`
+    return `<details class="regulation-search-result" data-regulation-id="${esc(item.id)}">
+      <summary><span class="regulation-result-meta">${esc(book.title)} · ${esc(book.standard)}</span><strong>${highlightRegulationQuery(ref)}</strong><span class="regulation-result-preview">${highlightRegulationQuery(item.text)}</span><span class="regulation-result-toggle">展开原文</span></summary>
+      <div class="regulation-copy"><p>${highlightRegulationQuery(item.text)}</p></div>
+    </details>`
+  }).join('')}</div>${items.length > limit ? '<button id="more-regulations" class="secondary-button full-button" type="button">加载更多原文</button>' : ''}`
+  target.querySelector('#more-regulations')?.addEventListener('click', () => {
+    const expanded = [...target.querySelectorAll('details[open]')].map(item => item.dataset.regulationId)
+    regulationSearchState.limit += 30
+    updateRegulationSearchResults()
+    target.querySelectorAll('details').forEach((item, index) => {
+      item.open = expanded.includes(item.dataset.regulationId)
+      if (index === limit) item.querySelector('summary').focus()
+    })
+  })
 }
 
 function questionRow(question) {
@@ -796,6 +963,11 @@ app.addEventListener('click', event => {
 
 backButton.addEventListener('click', () => {
   if (currentView.startsWith('exam')) return leaveExamView()
+  if (currentView === 'short-answers') {
+    navigate(historyStack.pop() || (currentBankId ? 'dashboard' : 'home'), { push: false })
+    app.querySelector('[data-action="short-answers"]').focus({ preventScroll: true })
+    return
+  }
   if (currentView === 'practice') {
     if (Number.isInteger(session?.reviewIndex)) return returnToCurrentQuestion()
     session = null
@@ -812,7 +984,8 @@ bankSwitch.addEventListener('click', () => { session = null; historyStack = []; 
 bottomNav.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
   session = null
   historyStack = []
-  navigate(button.dataset.nav, { push: false })
+  const destination = button.dataset.nav
+  navigate(!currentBankId && destination !== 'regulations' ? 'home' : destination, { push: false })
 }))
 
 function boot() {

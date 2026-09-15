@@ -11,7 +11,8 @@ const safety2024General = JSON.parse(fs.readFileSync(new URL('../app/assets/data
 const safety2024Coal = JSON.parse(fs.readFileSync(new URL('../app/assets/data/safety2024coal.json', import.meta.url)))
 const regulations = JSON.parse(fs.readFileSync(new URL('../app/assets/data/regulations.json', import.meta.url)))
 const safetyWeek3 = JSON.parse(fs.readFileSync(new URL("../app/assets/data/safety-week3.json", import.meta.url)))
-const allBanks = [exam0828, safetyWeek2, safetyWeek3, youthTheory2, safety2024General, safety2024Coal]
+const safetyWeek4 = JSON.parse(fs.readFileSync(new URL("../app/assets/data/safety-week4.json", import.meta.url)))
+const allBanks = [exam0828, safetyWeek2, safetyWeek3, safetyWeek4, youthTheory2, safety2024General, safety2024Coal]
 const embeddedWindow = {}
 vm.runInNewContext(fs.readFileSync(new URL('../app/banks-data.js', import.meta.url), 'utf8'), { window: embeddedWindow })
 vm.runInNewContext(fs.readFileSync(new URL('../app/regulations-data.js', import.meta.url), 'utf8'), { window: embeddedWindow })
@@ -101,7 +102,7 @@ assert.equal(safety2024General.chapters.length, 24)
 assert.equal(safety2024Coal.questionCount, 3207)
 assert.equal(safety2024Coal.questions.length, 3207)
 assert.equal(safety2024Coal.chapters.length, 11)
-assert.equal(new Set(allBanks.flatMap(bank => bank.questions.map(question => question.id))).size, 6857)
+assert.equal(new Set(allBanks.flatMap(bank => bank.questions.map(question => question.id))).size, 7127)
 
 for (const bank of allBanks) {
   const grouped = ['choice', 'fill', 'judge'].flatMap(group => bank.questions.filter(question => matchesQuestionGroup(question.type, group)))
@@ -181,4 +182,4 @@ for (const id of ['safetyweek3-0019', 'safetyweek3-0025', 'safetyweek3-0029']) {
 }
 assert.deepEqual(findRegulationMatches(youthTheory2.questions[0], 'youththeory2', regulations, 3), [])
 
-console.log('All tests passed: 6 independent banks, 6857 questions, and 2 offline regulation sources validated.')
+console.log('All tests passed: 7 independent banks, 7127 questions, and 2 offline regulation sources validated.')

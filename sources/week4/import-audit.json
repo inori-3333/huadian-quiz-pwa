@@ -1,0 +1,15 @@
+{
+  "sourceFile": "第四周安规题库（初版）.docx",
+  "sourceSha256": "7394addf92d0c4ca12ebdbf26c3fff1a46ef5f9b56890ffd74361621f508b037",
+  "regulationsSha256": "a1053d0dbc8e8fea0dc63e5eab653d5db5788984e4ec18b5dec78fa6ac4837f4",
+  "questions": 270,
+  "groups": 18,
+  "types": {
+    "single": 90,
+    "fill": 90,
+    "judge": 90
+  },
+  "reviewedAgainst": "Q/CHD 85.1—2024 in app/assets/data/regulations.json",
+  "changedQuestions": 105,
+  "originalDocumentModified": false
+}

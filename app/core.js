@@ -215,10 +215,21 @@ function findRegulationMatches(question, bankId, regulationData, limit = 3) {
     .slice(0, Math.max(0, limit))
 }
 
+// Literal keyword search across the complete references, independent of question banks.
+function searchRegulations(query, data, source = 'all') {
+  const terms = String(query || '').trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (!terms.length) return []
+  return data.clauses.filter(entry => {
+    if (source !== 'all' && entry.source !== source) return false
+    const text = `${entry.ref} ${entry.text}`.toLowerCase()
+    return terms.every(term => text.includes(term))
+  })
+}
+
 global.QuizCore = {
   normalizeText, normalizeChoice, isCorrectAnswer, usesImmediateSubmission, matchesQuestionGroup,
   normalizeQuestionProgress, recordQuestionResult, createResumeSnapshot, isResumeAvailable, shuffled,
   EXAM_SECTIONS, examQuestionPools, createExamPaper, gradeExamPaper,
-  normalizeSearchText, regulationTokens, regulationReferences, sourceIdsForQuestion, findRegulationMatches
+  normalizeSearchText, regulationTokens, regulationReferences, sourceIdsForQuestion, findRegulationMatches, searchRegulations
 }
 })(globalThis)

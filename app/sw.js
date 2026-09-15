@@ -4,7 +4,7 @@ const CACHE_PREFIX = `huadian-quiz:${new URL(self.registration.scope).pathname}:
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_REVISION}`
 const APP_SHELL = [
   './', './index.html', './styles.css', './core.js', './exam.js', './main.js', './pwa.js',
-  './banks-data.js', './regulations-data.js', './manifest.webmanifest',
+  './banks-data.js', './regulations-data.js', './short-answers.js', './manifest.webmanifest',
   './assets/icon.svg', './assets/icon.png', './assets/icon-192.png', './assets/group-15.jpg'
 ]
 const SHELL_URLS = new Set(APP_SHELL.map(path => new URL(path, self.location).href))

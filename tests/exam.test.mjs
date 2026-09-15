@@ -8,7 +8,7 @@ const bank = readBank('safety-week2')
 
 // Exact composition, section order, no duplicate IDs, source isolation, and
 // deterministic random inputs exercise both ends of the shuffle range.
-for (const source of [bank, readBank('exam0828'), readBank('safety-week3')]) {
+for (const source of [bank, readBank('exam0828'), readBank('safety-week3'), readBank('safety-week4')]) {
   for (const random of [() => 0, () => 0.999999, Math.random]) {
     const paper = createExamPaper(source.questions, random)
     assert.equal(paper.length, 65)

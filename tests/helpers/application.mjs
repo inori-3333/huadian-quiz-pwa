@@ -22,7 +22,7 @@ class Element {
   closest() { return null }
 }
 
-const sources = ['core.js', 'banks-data.js', 'regulations-data.js', 'exam.js', 'main.js'].map(file =>
+const sources = ['core.js', 'banks-data.js', 'regulations-data.js', 'short-answers.js', 'exam.js', 'main.js'].map(file =>
   fs.readFileSync(new URL(`../../app/${file}`, import.meta.url), 'utf8'))
 
 export function createApplication(storage = new Map()) {
