@@ -343,48 +343,5 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .regulation-search-result mark { background: var(--green-pale); color: var(--green-dark); }
 .regulation-search-result summary:focus-visible, #regulation-search:focus-visible, #regulation-source-filter:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 
-/* Revision reading uses the same paper, type and original-text treatment as regulations. */
-main[data-view="short-answers"] { max-width: 800px; }
-.short-answer-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; margin: 16px 0; border: 1px solid var(--green); border-radius: 18px; padding: 17px 20px; background: var(--green-pale); color: var(--green-dark); text-align: left; cursor: pointer; }
-.short-answer-entry strong, .short-answer-entry small { display: block; }
-.short-answer-entry strong { font-size: 19px; }
-.short-answer-entry small { margin-top: 6px; font-size: 12px; line-height: 1.6; }
-.short-answer-entry > span:last-child { font-size: 25px; }
-.short-answer-entry:hover { background: var(--surface); }
-.short-answer-entry:active { background: var(--paper); }
-.short-answer-entry:focus-visible, .short-answer-contents summary:focus-visible, .short-answer-contents button:focus-visible, .short-answer-card button:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
-.short-answer-intro h1 { margin: 4px 0 8px; font-size: 28px; }
-.short-answer-intro p { font-size: 13px; line-height: 1.75; color: var(--muted); }
-.short-answer-intro .short-answer-reminder { border-left: 3px solid var(--gold); padding: 10px 12px; background: var(--surface); color: var(--ink); font-weight: 700; }
-.short-answer-contents { margin: 20px 0; border-block: 1px solid var(--line); scroll-margin-top: 90px; }
-.short-answer-contents summary { padding: 16px 4px; color: var(--green); cursor: pointer; font-size: 14px; font-weight: 700; }
-.short-answer-contents nav { display: grid; padding-bottom: 12px; }
-.short-answer-contents button { display: flex; gap: 10px; border: 0; border-radius: 8px; padding: 12px 8px; background: transparent; color: var(--ink); text-align: left; font-size: 14px; line-height: 1.65; cursor: pointer; }
-.short-answer-contents button span { flex: 0 0 24px; color: var(--green); font-variant-numeric: tabular-nums; }
-.short-answer-contents summary:hover, .short-answer-contents button:hover { background: var(--green-pale); }
-.short-answer-contents button:active { background: var(--line); }
-.short-answer-list { display: grid; gap: 20px; }
-.short-answer-card { min-width: 0; border: 1px solid var(--line); border-radius: 22px; padding: 22px; background: var(--surface); overflow-wrap: anywhere; }
-.short-answer-card h2 { margin: 0 0 24px; font-size: 20px; line-height: 1.6; scroll-margin-top: 90px; }
-.short-answer-number { color: var(--green); font-variant-numeric: tabular-nums; }
-.short-answer-card h3 { margin: 0 0 12px; color: var(--green); font-size: 13px; }
-.short-answer-copy p { margin: 0 0 12px; font-size: 16px; line-height: 1.9; }
-.short-answer-original { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 20px; }
-.short-answer-original .short-answer-source { margin: -4px 0 18px; color: var(--muted); font-size: 11px; line-height: 1.75; }
-.short-answer-clause h4 { margin: 16px 0 8px; font-size: 13px; font-weight: 700; }
-.short-answer-clause .regulation-copy { margin: 0 0 20px; border-left-color: var(--gold); animation: none; }
-.short-answer-clause .regulation-copy p { color: var(--ink); font-size: 15px; line-height: 1.95; white-space: pre-wrap; }
-.short-answer-card .tiny-button { min-height: 44px; cursor: pointer; }
-.short-answer-card .tiny-button:hover { background: var(--green-pale); }
-.short-answer-card .tiny-button:active { background: var(--line); }
-.short-answer-notice-copy p { margin: 0 0 16px; font-size: 15px; line-height: 1.8; }
-.short-answer-notice-copy .short-answer-caution { border-left: 3px solid var(--gold); padding: 10px 12px; background: var(--paper); font-size: 21px; font-weight: 800; }
-@media (max-width: 420px) { .short-answer-card { padding: 18px 16px; } }
-@media (min-width: 900px) {
-  main[data-view="dashboard"] { align-content: start; }
-  main[data-view="dashboard"] .progress-card { grid-row: 1 / span 2; }
-  main[data-view="dashboard"] .short-answer-entry { grid-column: 2; margin: 0; }
-  main[data-view="dashboard"] .action-grid { grid-column: 2; }
-}
 .bottom-nav button { min-height: 44px; cursor: pointer; }
 .bottom-nav button:hover { background: var(--green-pale); }

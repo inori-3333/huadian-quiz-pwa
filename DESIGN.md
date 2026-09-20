@@ -69,12 +69,8 @@ components:
 
 搜索保留于本次应用运行内存，切换导航时保留关键词、范围与显示数量；沿用本地 Android/PWA 无 URL 路由架构，不将搜索写入 URL。输入框支持中文组合输入、立即清空并恢复焦点。路由标题由 setHeader 统一更新。全文数据沿用内置 regulations-data.js，不改变原文或引入网络依赖。
 
-## 简答题复习
+## 通用交互
 
-选题库首页和题库主页共享 shortAnswerEntry 入口，文案固定“简答题...吗？”。阅读页按提供顺序显示 20 题，保留重复题，参考答案及完整对应条文均默认显示；目录使用原生 details 和题目跳转按钮，正文由页面自然滚动。复用现有纸面、深绿与安规宋体样式，正文 16px，原文 15px；来源固定匹配内置通用要求的条款号，不使用模糊搜索。
-
-简答题阅读页最大宽度 800px，限制桌面长段落的行长；题库主页桌面端保留左侧进度、右侧操作布局，入口放在右侧操作区上方。从阅读页返回时回到原首页顶部并恢复入口焦点。
-
-首次点击进入时显示“仅供复习参考，可能一个都不考”。shortAnswerNoticeDismissed 与启动公告独立存储；仅关闭弹窗时记住，不影响题库进度、收藏、编辑与未完成练习。页面保留简短提示。启动公告与复习提示共用 showReadingNotice，复用原有 modal/swipe-guide 样式，支持确认、关闭、Escape、遮罩关闭；弹窗打开时背景 inert、锁定页面滚动，Tab 循环，关闭复习提示后焦点回到阅读页标题。
+启动公告使用 showReadingNotice，复用原有 modal/swipe-guide 样式，支持确认、关闭、Escape、遮罩关闭；弹窗打开时背景 inert、锁定页面滚动，Tab 循环，关闭后恢复先前焦点。
 
 滚动条全局样式由 app/styles.css 管理，thumb/track/hover/active 映射到现有 muted/paper/green/green-dark，使用标准属性及 WebKit 回退，forced-colors 恢复系统配色；根页面保留稳定滚动条空间。

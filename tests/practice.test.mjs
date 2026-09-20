@@ -14,7 +14,7 @@ assert.equal(createApplication(storage).modal.innerHTML, '', 'Dismissal must sur
 // Every close path preserves learning data and persists only the current announcement.
 for (const previous of [{}, { swipeGuideDismissed: true }, { dismissedAnnouncementVersion: 'older-announcement' }]) {
   for (const method of ['done', 'close', 'escape', 'backdrop']) {
-    const oldState = { ...previous, currentBankId: 'safetyweek2', progress: { saved: { attempts: 3, favorite: true } }, edits: { saved: { answer: 'A' } }, resumeSessions: { saved: { index: 2 } }, examSessions: { saved: { index: 3 } } }
+    const oldState = { ...previous, shortAnswerNoticeDismissed: true, currentBankId: 'safetyweek2', progress: { saved: { attempts: 3, favorite: true } }, edits: { saved: { answer: 'A' } }, resumeSessions: { saved: { index: 2 } }, examSessions: { saved: { index: 3 } } }
     const upgradeStorage = new Map([['huadian-quiz-state-v1', JSON.stringify(oldState)]])
     const upgraded = createApplication(upgradeStorage)
     assert.equal(upgraded.app.dataset.view, 'dashboard')
@@ -28,6 +28,7 @@ for (const previous of [{}, { swipeGuideDismissed: true }, { dismissedAnnounceme
     }
     assert.equal(upgraded.modal.innerHTML, '')
     const savedState = JSON.parse(upgradeStorage.get('huadian-quiz-state-v1'))
+    assert.equal(Object.hasOwn(savedState, 'shortAnswerNoticeDismissed'), false, 'Upgrade must discard the removed feature state')
     for (const key of ['progress', 'edits', 'resumeSessions', 'examSessions']) assert.deepEqual(savedState[key], oldState[key])
     assert.equal(savedState.dismissedAnnouncementVersion, run('ANNOUNCEMENT_VERSION'))
     assert.equal(createApplication(upgradeStorage).modal.innerHTML, '', `${method} dismissal must survive restart`)

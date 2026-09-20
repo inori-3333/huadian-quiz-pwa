@@ -31,7 +31,6 @@ const examSessions = stored.examSessions || {}
 // Change this only when publishing a new announcement, independently of app releases.
 const ANNOUNCEMENT_VERSION = 'group-15-2026-09'
 let dismissedAnnouncementVersion = stored.dismissedAnnouncementVersion || null
-let shortAnswerNoticeDismissed = stored.shortAnswerNoticeDismissed === true
 let currentBankId = stored.currentBankId || null
 
 function loadStoredState() {
@@ -44,7 +43,7 @@ function loadStoredState() {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, dismissedAnnouncementVersion, shortAnswerNoticeDismissed }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, dismissedAnnouncementVersion }))
     return true
   } catch {
     if (!storageWarningShown) showToast('浏览器无法保存进度，请允许本站使用本地存储')
@@ -229,7 +228,6 @@ function render() {
   else if (currentView === 'dashboard') renderDashboard()
   else if (['library', 'wrong', 'favorite'].includes(currentView)) renderList(currentView)
   else if (currentView === 'regulations') renderRegulationSearch()
-  else if (currentView === 'short-answers') renderShortAnswers()
   else if (currentView === 'practice') renderPractice()
   else if (currentView === 'exam-setup') renderExamSetup()
   else if (currentView === 'exam') renderExam()
@@ -242,7 +240,6 @@ function renderHome() {
   setBottomNav(true, 'dashboard')
   app.innerHTML = `
     <div class="library-heading"><div><h1>选择题库</h1><p>${banks.size} 个题库 · ${[...banks.values()].reduce((total, bank) => total + bank.questionCount, 0)} 道题</p></div><span>v${esc(document.querySelector('meta[name="app-version"]').content)}</span></div>
-    ${shortAnswerEntry()}
     <section class="bank-grid">
       ${[...banks.values()].map(bank => {
         const stats = statsFor(bank)
@@ -259,7 +256,6 @@ function renderHome() {
       }).join('')}
     </section>
     <p class="library-note">练习进度、错题与收藏保存在当前浏览器。离线就绪后，断网也能刷题和查看安规原文。</p>`
-  app.querySelector('[data-action="short-answers"]').addEventListener('click', openShortAnswers)
   app.querySelectorAll('[data-bank]').forEach(card => {
     card.addEventListener('click', () => selectBank(card.dataset.bank))
     card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectBank(card.dataset.bank) } })
@@ -280,7 +276,6 @@ function renderDashboard() {
       <div class="progress-track"><i style="width:${stats.percent}%"></i></div>
       <div class="progress-notes"><span>累计作答 ${stats.attempts} 次</span><span>历史错题 ${stats.wrongEver} 题</span><span>收藏 ${stats.favorite} 题</span></div>
     </section>
-    ${shortAnswerEntry()}
     <section class="action-grid">
       ${savedSession ? '<button class="action-card continue" data-action="continue"><span class="action-icon">▶</span><strong>继续刷题</strong></button>' : ''}
       ${bank.id !== 'youththeory2' ? '<button class="action-card" data-action="exam"><span class="action-icon">▤</span><strong>模拟安规考试</strong></button>' : ''}
@@ -292,7 +287,6 @@ function renderDashboard() {
       <button class="action-card" data-action="favorite"><span class="action-icon">★</span><strong>收藏练习</strong></button>
     </section>`
   app.querySelector('[data-action="continue"]')?.addEventListener('click', continueSession)
-  app.querySelector('[data-action="short-answers"]').addEventListener('click', openShortAnswers)
   app.querySelector('[data-action="exam"]')?.addEventListener('click', () => navigate('exam-setup'))
   app.querySelector('[data-action="sequence"]').addEventListener('click', () => startSession(questionsForBank().map(q => q.id), '顺序刷题'))
   app.querySelector('[data-action="start-at"]').addEventListener('click', openStartPicker)
@@ -300,64 +294,6 @@ function renderDashboard() {
   app.querySelector('[data-action="random"]').addEventListener('click', () => startSession(shuffled(questionsForBank().map(q => q.id)), '随机练习'))
   app.querySelector('[data-action="wrong"]').addEventListener('click', () => startFilteredSession('wrong'))
   app.querySelector('[data-action="favorite"]').addEventListener('click', () => startFilteredSession('favorite'))
-}
-
-function shortAnswerEntry() {
-  return `<button class="short-answer-entry" data-action="short-answers" type="button" aria-label="简答题...吗？">
-    <span><strong>简答题...吗？</strong><small>${window.SHORT_ANSWERS.length} 道预测 · 答案与安规原文</small></span><span aria-hidden="true">↗</span>
-  </button>`
-}
-
-function openShortAnswers() {
-  navigate('short-answers')
-  const heading = app.querySelector('#short-answer-heading')
-  heading.focus()
-  if (shortAnswerNoticeDismissed) return
-  showReadingNotice({
-    id: 'short-answer-notice', title: '先说在前面', closeLabel: '关闭复习提示', doneLabel: '知道了，开始复习',
-    content: `<div id="short-answer-notice-copy" class="short-answer-notice-copy"><p>接下来提供的全部内容<strong>仅供复习参考</strong>，不代表考试范围或出题承诺。</p><p class="short-answer-caution">可能一个都不考。</p><p>请结合完整安规复习，不要只依赖这些预测题。</p></div>`,
-    restoreFocus: heading,
-    onClose: () => { shortAnswerNoticeDismissed = true; saveState() }
-  })
-}
-
-function renderShortAnswers() {
-  setHeader('简答题...吗？', '复习参考', { back: true })
-  setBottomNav(true, 'dashboard')
-  const questions = window.SHORT_ANSWERS
-  const source = regulationData.sources.find(item => item.id === 'general')
-  app.innerHTML = `
-    <section class="short-answer-intro">
-      <h1 id="short-answer-heading" tabindex="-1">简答题...吗？</h1>
-      <p class="short-answer-reminder">仅供复习参考，可能一个都不考。</p>
-      <p>参考答案按要点整理；下方列出对应安规完整条文，复习时以原文为准。</p>
-    </section>
-    <details class="short-answer-contents"><summary>题目目录 · ${questions.length} 题</summary>
-      <nav aria-label="简答题目录">${questions.map(item => `<button type="button" data-short-answer-jump="${item.number}"><span>${item.number}.</span>${esc(item.question)}</button>`).join('')}</nav>
-    </details>
-    <div class="short-answer-list">${questions.map(item => `<article class="short-answer-card" aria-labelledby="short-answer-${item.number}">
-      <h2 id="short-answer-${item.number}" tabindex="-1"><span class="short-answer-number">${item.number}.</span> ${esc(item.question)}</h2>
-      <h3>参考答案</h3><div class="short-answer-copy">${item.answer.map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}</div>
-      <section class="short-answer-original" aria-label="第 ${item.number} 题对应安规原文">
-        <h3>对应安规原文</h3><p class="short-answer-source">${esc(source.title)} · ${esc(source.standard)}</p>
-        ${item.refs.map(ref => {
-          const clause = regulationData.clauses.find(entry => entry.source === source.id && entry.ref === ref && entry.kind === 'clause')
-          return `<div class="short-answer-clause"><h4>第 ${esc(ref)} 条</h4><div class="regulation-copy"><p>${esc(clause.text).replace(/ (?=[a-z]\) )/g, '\n')}</p></div></div>`
-        }).join('')}
-      </section>
-      <button class="tiny-button" type="button" data-short-answer-top>返回题目目录</button>
-    </article>`).join('')}</div>`
-  app.querySelectorAll('[data-short-answer-jump]').forEach(button => button.addEventListener('click', () => {
-    const target = app.querySelector(`#short-answer-${button.dataset.shortAnswerJump}`)
-    target.focus({ preventScroll: true })
-    target.scrollIntoView({ block: 'start' })
-  }))
-  app.querySelectorAll('[data-short-answer-top]').forEach(button => button.addEventListener('click', () => {
-    const contents = app.querySelector('.short-answer-contents')
-    contents.open = true
-    contents.querySelector('summary').focus({ preventScroll: true })
-    contents.scrollIntoView({ block: 'start' })
-  }))
 }
 
 function openTypePicker() {
@@ -963,11 +899,6 @@ app.addEventListener('click', event => {
 
 backButton.addEventListener('click', () => {
   if (currentView.startsWith('exam')) return leaveExamView()
-  if (currentView === 'short-answers') {
-    navigate(historyStack.pop() || (currentBankId ? 'dashboard' : 'home'), { push: false })
-    app.querySelector('[data-action="short-answers"]').focus({ preventScroll: true })
-    return
-  }
   if (currentView === 'practice') {
     if (Number.isInteger(session?.reviewIndex)) return returnToCurrentQuestion()
     session = null

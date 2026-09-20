@@ -86,7 +86,6 @@ def main() -> None:
             "assets/index.html",
             "assets/banks-data.js",
             "assets/regulations-data.js",
-            "assets/short-answers.js",
             "assets/assets/data/exam0828.json",
             "assets/assets/data/safety-week2.json",
             "assets/assets/data/safety-week3.json",
@@ -102,13 +101,14 @@ def main() -> None:
             if path.is_file() and not path.name.startswith("."):
                 asset = "assets/" + path.relative_to(source).as_posix()
                 assert apk.read(asset) == path.read_bytes(), f"APK contains a stale asset: {asset}"
+        assert "assets/short-answers.js" not in names
         assert "assets/assets/data/safety.json" not in names
         assert "assets/assets/data/theory.json" not in names
         elements, attrs = manifest_facts(apk.read("AndroidManifest.xml"))
         assert "uses-permission" not in elements
         assert attrs["package"][2] == "com.inori.hdquizstudy"
-        assert attrs["versionCode"][1] == 10608
-        assert attrs["versionName"][2] == "1.6.8"
+        assert attrs["versionCode"][1] == 10609
+        assert attrs["versionName"][2] == "1.6.9"
         assert attrs["label"][2] == "华电离线刷题库"
         assert attrs["name"][2] in {"com.inori.hdquizstudy.StudyView", "android.intent.category.LAUNCHER"}
         assert attrs["usesCleartextTraffic"][1] == 0
@@ -173,7 +173,7 @@ def main() -> None:
         regulations = json.loads(apk.read("assets/assets/data/regulations.json"))
         assert b'banks-data.js' in index
         assert b'regulations-data.js' in index
-        assert b'short-answers.js' in index
+        assert b'short-answers.js' not in index
         assert b'fetch(' not in main_js
         assert b'usesImmediateSubmission' in main_js
         assert b'correct && autoAdvance' in main_js
@@ -207,7 +207,7 @@ def main() -> None:
         assert any(entry["source"] == "coal" and entry["ref"] == "4.1.1" for entry in regulations["clauses"])
         assert b"bankId === 'youththeory2'" in core_js
         assert '安规原文依据'.encode() in main_js
-    print("Clean APK verified: zero permissions, seven banks, 7127 questions, short-answer revision, and two offline regulation sources.")
+    print("Clean APK verified: zero permissions, seven banks, 7127 questions, and two offline regulation sources.")
 
 
 if __name__ == "__main__":
