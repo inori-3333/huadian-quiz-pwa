@@ -15,10 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,6 +38,18 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+
+  # Upload and deploy live in separate jobs: deploy-pages looks the artifact
+  # up through the Actions results service, and that lookup can come back
+  # empty when it runs right after finalizing in the same job
+  # (actions/deploy-pages#451).
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
