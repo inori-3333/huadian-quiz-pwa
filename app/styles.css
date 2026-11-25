@@ -197,14 +197,49 @@ main[data-view="practice"] { touch-action: pan-y pinch-zoom; }
 
 main[data-view^="exam"] { max-width: 920px; }
 .exam-setup h1 { margin: 20px 0 8px; font-size: 28px; }
-.exam-total { color: var(--muted); }
-.exam-total strong { color: var(--green); font-size: 36px; }
+.exam-total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; color: var(--muted); font-size: 13px; }
+.exam-total strong { color: var(--green); font-size: 28px; line-height: 1.25; }
 .exam-sections { margin: 22px 0; text-align: left; border-top: 1px solid var(--line); }
 .exam-sections > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; padding: 16px 0; border-bottom: 1px solid var(--line); }
 .exam-sections strong { font-size: 14px; }
 .exam-sections span { color: var(--muted); font-size: 13px; }
 .exam-note { margin: 14px 0 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
 .exam-unavailable { padding: 14px; background: var(--accent-pale); border-radius: 12px; font-size: 14px; line-height: 1.7; }
+.exam-plan-head { margin: 24px 0 12px; }
+.exam-plan-head h2 { margin: 0; font-size: 16px; }
+.exam-plan-head p { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.exam-plan { display: grid; gap: 10px; }
+.exam-plan-row { border: 1px solid var(--line); border-radius: 16px; padding: 13px 14px; background: var(--paper); }
+.exam-plan-row.disabled { opacity: .55; }
+.exam-plan-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.exam-plan-toggle input { flex: none; width: 19px; height: 19px; accent-color: var(--green); }
+.exam-plan-toggle span, .exam-plan-toggle strong, .exam-plan-toggle small { display: block; }
+.exam-plan-toggle strong { font-size: 14px; }
+.exam-plan-toggle small { margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.exam-plan-fields { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 10px; margin-top: 10px; }
+.exam-plan-fields label { color: var(--muted); font-size: 10px; font-weight: 700; }
+.exam-plan-fields input { width: 100%; min-height: 44px; margin-top: 6px; border: 1px solid var(--line); border-radius: 12px; padding: 0 10px; background: #fff; color: var(--ink); }
+.exam-plan-fields input:disabled { background: var(--paper); color: var(--muted); }
+.exam-plan-subtotal { align-self: center; justify-self: end; padding-bottom: 12px; color: var(--green); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.exam-plan-errors { display: grid; gap: 6px; margin-top: 10px; }
+.exam-plan-error { margin: 0; color: var(--accent); font-size: 12px; line-height: 1.6; }
+.exam-presets { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.exam-presets-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.exam-presets-head h2 { margin: 0; font-size: 15px; }
+.exam-presets-head p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.exam-presets-head > span { flex: none; color: var(--muted); font-size: 11px; }
+.exam-preset-list { display: grid; gap: 8px; margin-top: 12px; }
+.exam-preset-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+.exam-preset-apply { width: 100%; border: 0; border-radius: 14px; padding: 12px 14px; background: transparent; color: var(--ink); text-align: left; }
+.exam-preset-apply strong, .exam-preset-apply span { display: block; }
+.exam-preset-apply strong { font-size: 13px; }
+.exam-preset-apply span { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.exam-preset-delete { width: 44px; height: 44px; margin-right: 2px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 19px; }
+.exam-preset-empty { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+@media (max-width: 380px) {
+  .exam-plan-fields { grid-template-columns: 1fr 1fr; }
+  .exam-plan-subtotal { grid-column: 1 / -1; justify-self: start; padding-bottom: 0; }
+}
 .exam-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 16px; font-size: 14px; }
 .exam-status span { color: var(--muted); font-size: 12px; }
 .exam-shell .question-card { animation: none; }

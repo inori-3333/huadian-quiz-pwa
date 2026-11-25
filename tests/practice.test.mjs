@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { createApplication } from './helpers/application.mjs'
 const { document, app, modal, timers, storage, run, plain } = createApplication()
 assert.equal(app.dataset.view, 'home')
-assert.match(modal.innerHTML, /Powered by Group 15/)
+assert.match(modal.innerHTML, /Powered by inori/)
+assert.match(modal.innerHTML, /小田特供版/)
 modal.querySelector('.modal-done').handlers.get('click')()
 assert.equal(modal.innerHTML, '')
 assert.equal(JSON.parse(storage.get('huadian-quiz-state-v1')).dismissedAnnouncementVersion, run('ANNOUNCEMENT_VERSION'))

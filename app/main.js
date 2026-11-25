@@ -28,8 +28,9 @@ const progress = stored.progress || {}
 const edits = stored.edits || {}
 const resumeSessions = stored.resumeSessions || {}
 const examSessions = stored.examSessions || {}
+const examPresets = stored.examPresets || {}
 // Change this only when publishing a new announcement, independently of app releases.
-const ANNOUNCEMENT_VERSION = 'group-15-2026-09'
+const ANNOUNCEMENT_VERSION = 'inori-special-2026-11'
 let dismissedAnnouncementVersion = stored.dismissedAnnouncementVersion || null
 let currentBankId = stored.currentBankId || null
 
@@ -43,7 +44,7 @@ function loadStoredState() {
 
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, dismissedAnnouncementVersion }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentBankId, progress, edits, resumeSessions, examSessions, examPresets, dismissedAnnouncementVersion }))
     return true
   } catch {
     if (!storageWarningShown) showToast('浏览器无法保存进度，请允许本站使用本地存储')
@@ -172,12 +173,12 @@ function showReadingNotice({ id, title, content, closeLabel, doneLabel, onClose,
 function showAnnouncement() {
   if (dismissedAnnouncementVersion === ANNOUNCEMENT_VERSION || !['home', 'dashboard'].includes(currentView)) return
   showReadingNotice({
-    id: 'swipe-guide', title: 'Powered by Group 15', closeLabel: '关闭更新说明', doneLabel: '知道了',
+    id: 'swipe-guide', title: 'Powered by inori', closeLabel: '关闭更新说明', doneLabel: '知道了',
     content: `
     <img class="welcome-art" src="assets/group-15.jpg" width="1448" height="1448" alt="绿色森林中淋着水的黑猫插画">
     <div id="swipe-guide-copy" class="welcome-updates">
       <h3>本次更新</h3>
-      <ul><li>第三周安规考试题库已更新至最终版。</li><li>优化了安规原文的匹配。</li></ul>
+      <ul><li>小田特供版</li></ul>
     </div>`,
     onClose: () => {
       dismissedAnnouncementVersion = ANNOUNCEMENT_VERSION
@@ -278,7 +279,7 @@ function renderDashboard() {
     </section>
     <section class="action-grid">
       ${savedSession ? '<button class="action-card continue" data-action="continue"><span class="action-icon">▶</span><strong>继续刷题</strong></button>' : ''}
-      ${bank.id !== 'youththeory2' ? '<button class="action-card" data-action="exam"><span class="action-icon">▤</span><strong>模拟安规考试</strong></button>' : ''}
+      <button class="action-card" data-action="exam"><span class="action-icon">▤</span><strong>模拟考试</strong></button>
       <button class="action-card" data-action="sequence"><span class="action-icon">→</span><strong>顺序刷题</strong></button>
       <button class="action-card" data-action="start-at"><span class="action-icon">#</span><strong>指定题号</strong></button>
       <button class="action-card" data-action="by-type"><span class="action-icon">≡</span><strong>题型刷题</strong></button>
