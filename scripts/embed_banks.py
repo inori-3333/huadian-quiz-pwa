@@ -22,6 +22,10 @@ def main() -> None:
         "youth-theory-2.json",
         "safety2024general.json",
         "safety2024coal.json",
+        "dispatch-basic.json",
+        "dispatch-wind.json",
+        "dispatch-pv.json",
+        "dispatch-all.json",
     ):
         with (app / "assets" / "data" / name).open(encoding="utf-8") as handle:
             banks.append(json.load(handle))

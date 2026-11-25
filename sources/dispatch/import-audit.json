@@ -1,0 +1,46 @@
+{
+  "banks": [
+    {
+      "sourceFile": "调度业务联系资格培训题库-调度基础.xlsx",
+      "sourceSha256": "bd478e46fb199bec37be71710a9c346e846dc428e67fd731c24954881ab9f9c4",
+      "sheet": "汇总",
+      "questions": 1000,
+      "types": {
+        "single": 500,
+        "multiple": 500
+      },
+      "chapters": [
+        "调度基础"
+      ],
+      "skippedRows": 0
+    },
+    {
+      "sourceFile": "调度业务联系资格培训题库-风电.xlsx",
+      "sourceSha256": "927dc3f44e8afdd35ee97032c17da3815b56d7a3fcbbea677eea2e203efa45f1",
+      "sheet": "汇总",
+      "questions": 300,
+      "types": {
+        "single": 150,
+        "multiple": 150
+      },
+      "chapters": [
+        "风电"
+      ],
+      "skippedRows": 0
+    },
+    {
+      "sourceFile": "调度业务联系资格培训题库-光伏.xlsx",
+      "sourceSha256": "cda236774ae03b1da99530cc9485b14553b8340f8439e11ad8f6362760722e15",
+      "sheet": "汇总",
+      "questions": 300,
+      "types": {
+        "single": 150,
+        "multiple": 150
+      },
+      "chapters": [
+        "光伏专业"
+      ],
+      "skippedRows": 0
+    }
+  ]
+}

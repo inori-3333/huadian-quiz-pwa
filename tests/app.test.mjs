@@ -12,7 +12,11 @@ const safety2024Coal = JSON.parse(fs.readFileSync(new URL('../app/assets/data/sa
 const regulations = JSON.parse(fs.readFileSync(new URL('../app/assets/data/regulations.json', import.meta.url)))
 const safetyWeek3 = JSON.parse(fs.readFileSync(new URL("../app/assets/data/safety-week3.json", import.meta.url)))
 const safetyWeek4 = JSON.parse(fs.readFileSync(new URL("../app/assets/data/safety-week4.json", import.meta.url)))
-const allBanks = [exam0828, safetyWeek2, safetyWeek3, safetyWeek4, youthTheory2, safety2024General, safety2024Coal]
+const dispatchBasic = JSON.parse(fs.readFileSync(new URL('../app/assets/data/dispatch-basic.json', import.meta.url)))
+const dispatchWind = JSON.parse(fs.readFileSync(new URL('../app/assets/data/dispatch-wind.json', import.meta.url)))
+const dispatchPv = JSON.parse(fs.readFileSync(new URL('../app/assets/data/dispatch-pv.json', import.meta.url)))
+const dispatchAll = JSON.parse(fs.readFileSync(new URL('../app/assets/data/dispatch-all.json', import.meta.url)))
+const allBanks = [exam0828, safetyWeek2, safetyWeek3, safetyWeek4, youthTheory2, safety2024General, safety2024Coal, dispatchBasic, dispatchWind, dispatchPv, dispatchAll]
 const embeddedWindow = {}
 vm.runInNewContext(fs.readFileSync(new URL('../app/banks-data.js', import.meta.url), 'utf8'), { window: embeddedWindow })
 vm.runInNewContext(fs.readFileSync(new URL('../app/regulations-data.js', import.meta.url), 'utf8'), { window: embeddedWindow })
@@ -88,6 +92,60 @@ assert.deepEqual(
   Object.fromEntries(['single', 'multiple', 'judge'].map(type => [type, youthTheory2.questions.filter(question => question.type === type).length])),
   { single: 288, multiple: 150, judge: 142 }
 )
+
+for (const [bank, id, title, chapter, bankTypeCounts] of [
+  [dispatchBasic, 'dispatchbasic', '调度业务联系资格培训题库·调度基础', '调度基础', { single: 500, multiple: 500 }],
+  [dispatchWind, 'dispatchwind', '调度业务联系资格培训题库·风电', '风电', { single: 150, multiple: 150 }],
+  [dispatchPv, 'dispatchpv', '调度业务联系资格培训题库·光伏', '光伏专业', { single: 150, multiple: 150 }]
+]) {
+  assert.equal(bank.id, id)
+  assert.equal(bank.title, title)
+  assert.deepEqual(bank.chapters, [chapter])
+  assert.equal(bank.questionCount, bankTypeCounts.single + bankTypeCounts.multiple)
+  assert.equal(bank.questions.length, bank.questionCount)
+  assert.equal(new Set(bank.questions.map(question => question.id)).size, bank.questionCount)
+  assert.ok(bank.questions.every(question => question.id.startsWith(`${id}-`)))
+  assert.ok(bank.questions.every(question => question.chapter === chapter))
+  assert.deepEqual(
+    Object.fromEntries(['single', 'multiple'].map(type => [type, bank.questions.filter(question => question.type === type).length])),
+    bankTypeCounts
+  )
+  const first = bank.questions[0]
+  assert.equal(first.number, 1)
+  assert.ok(first.stem.length > 0 && first.options.length >= 2)
+}
+assert.equal(dispatchBasic.questions[0].answer, 'B')
+assert.equal(dispatchBasic.questions[0].stem, '电力系统发生不对称短路时，离短路点越近，则负序电压（ ）。')
+
+assert.equal(dispatchAll.id, 'dispatchall')
+assert.equal(dispatchAll.title, '调度业务联系资格培训题库·总题库')
+assert.deepEqual(dispatchAll.chapters, ['调度基础', '风电', '光伏专业'])
+assert.equal(dispatchAll.questionCount, 1600)
+assert.equal(dispatchAll.questions.length, 1600)
+assert.equal(new Set(dispatchAll.questions.map(question => question.id)).size, 1600)
+assert.ok(dispatchAll.questions.every(question => question.id.startsWith('dispatchall-')))
+assert.deepEqual(
+  Object.fromEntries(['single', 'multiple'].map(type => [type, dispatchAll.questions.filter(question => question.type === type).length])),
+  { single: 800, multiple: 800 }
+)
+const combinedSources = [dispatchBasic, dispatchWind, dispatchPv].flatMap(bank =>
+  bank.questions.map(question => ({ bank: bank.id, question })))
+for (const [index, question] of dispatchAll.questions.entries()) {
+  const expected = combinedSources[index]
+  assert.equal(question.id, `dispatchall-${String(index + 1).padStart(4, '0')}`)
+  assert.equal(question.number, index + 1)
+  assert.equal(question.sourceBank, expected.bank)
+  assert.equal(question.sourceQuestionId, expected.question.id)
+  assert.equal(question.chapter, expected.question.chapter)
+  assert.equal(question.type, expected.question.type)
+  assert.equal(question.stem, expected.question.stem)
+  assert.equal(question.answer, expected.question.answer)
+  assert.deepEqual(question.options, expected.question.options)
+}
+const pvThreeOptions = dispatchPv.questions.find(question => question.sourceRow === 227)
+assert.equal(pvThreeOptions.id, 'dispatchpv-0226')
+assert.deepEqual(pvThreeOptions.options.map(option => option.key), ['A', 'B', 'C'])
+assert.equal(pvThreeOptions.answer, 'ABC')
 assert.deepEqual(
   Object.fromEntries(['single', 'multiple', 'judge'].map(type => [type, safety2024General.questions.filter(question => question.type === type).length])),
   { single: 852, multiple: 477, judge: 933 }
@@ -102,7 +160,7 @@ assert.equal(safety2024General.chapters.length, 24)
 assert.equal(safety2024Coal.questionCount, 3207)
 assert.equal(safety2024Coal.questions.length, 3207)
 assert.equal(safety2024Coal.chapters.length, 11)
-assert.equal(new Set(allBanks.flatMap(bank => bank.questions.map(question => question.id))).size, 7127)
+assert.equal(new Set(allBanks.flatMap(bank => bank.questions.map(question => question.id))).size, 10327)
 
 for (const bank of allBanks) {
   const grouped = ['choice', 'fill', 'judge'].flatMap(group => bank.questions.filter(question => matchesQuestionGroup(question.type, group)))
@@ -167,6 +225,10 @@ assert.deepEqual(regulationReferences('附录A5.3.5'), ['A.5.3.5'])
 assert.deepEqual(regulationReferences('表B.1'), ['B.1'])
 assert.deepEqual(regulationReferences('I.9'), ['I.9'])
 assert.deepEqual(sourceIdsForQuestion('youththeory2'), [])
+assert.deepEqual(sourceIdsForQuestion('dispatchbasic'), [])
+assert.deepEqual(sourceIdsForQuestion('dispatchwind'), [])
+assert.deepEqual(sourceIdsForQuestion('dispatchpv'), [])
+assert.deepEqual(sourceIdsForQuestion('dispatchall'), [])
 assert.deepEqual(sourceIdsForQuestion('safety2024general'), ['general'])
 assert.deepEqual(sourceIdsForQuestion('exam0828'), ['general', 'coal'])
 assert.equal(findRegulationMatches(safety2024General.questions[0], 'safety2024general', regulations, 3)[0].ref, '3.1')
@@ -181,5 +243,9 @@ for (const id of ['safetyweek3-0019', 'safetyweek3-0025', 'safetyweek3-0029']) {
   assert.ok(match.text.includes('40°C。不得有取暖设备。'))
 }
 assert.deepEqual(findRegulationMatches(youthTheory2.questions[0], 'youththeory2', regulations, 3), [])
+assert.deepEqual(findRegulationMatches(dispatchBasic.questions[0], 'dispatchbasic', regulations, 3), [])
+assert.deepEqual(findRegulationMatches(dispatchWind.questions[0], 'dispatchwind', regulations, 3), [])
+assert.deepEqual(findRegulationMatches(dispatchPv.questions[0], 'dispatchpv', regulations, 3), [])
+assert.deepEqual(findRegulationMatches(dispatchAll.questions[0], 'dispatchall', regulations, 3), [])
 
-console.log('All tests passed: 7 independent banks, 7127 questions, and 2 offline regulation sources validated.')
+console.log('All tests passed: 11 independent banks, 10327 questions, and 2 offline regulation sources validated.')
