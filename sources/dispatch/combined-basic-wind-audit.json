@@ -1,0 +1,31 @@
+{
+  "bank": "dispatchbasicwind",
+  "title": "调度业务联系资格培训题库·调度基础+风电",
+  "sourceBanks": [
+    {
+      "id": "dispatchbasic",
+      "title": "调度业务联系资格培训题库·调度基础",
+      "questions": 1000
+    },
+    {
+      "id": "dispatchwind",
+      "title": "调度业务联系资格培训题库·风电",
+      "questions": 300
+    }
+  ],
+  "sourceQuestions": 1300,
+  "questions": 1300,
+  "types": {
+    "single": 650,
+    "multiple": 650
+  },
+  "chapters": [
+    "调度基础",
+    "风电"
+  ],
+  "exactDuplicateQuestions": 1,
+  "sourceFilesSha256": {
+    "dispatch-basic.json": "0a459933b4d00560703e6546e5cb349f8f1add6a204389878f9a8d2bbb4170e6",
+    "dispatch-wind.json": "7c052bd4c9e501ffb2f21956a61cf4a82cf71c0174aa791008c32c032e8a23f3"
+  }
+}

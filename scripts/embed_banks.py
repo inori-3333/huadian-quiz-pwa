@@ -25,6 +25,8 @@ def main() -> None:
         "dispatch-basic.json",
         "dispatch-wind.json",
         "dispatch-pv.json",
+        "dispatch-basic-wind.json",
+        "dispatch-basic-pv.json",
         "dispatch-all.json",
     ):
         with (app / "assets" / "data" / name).open(encoding="utf-8") as handle:

@@ -49,7 +49,7 @@ assert.throws(() => createExamPaper(bank.questions, [{ type: 'single', count: 99
 assert.throws(() => createExamPaper([...bank.questions, ...bank.questions], [{ type: 'single', count: 90, points: 1 }]), /最多可抽 89 题/, 'Repeated source IDs must not inflate available counts')
 
 // Every bank can form a default paper from at least one of its own types.
-for (const name of ['exam0828', 'safety-week2', 'safety-week3', 'safety-week4', 'youth-theory-2', 'safety2024general', 'safety2024coal', 'dispatch-basic', 'dispatch-wind', 'dispatch-pv', 'dispatch-all']) {
+for (const name of ['exam0828', 'safety-week2', 'safety-week3', 'safety-week4', 'youth-theory-2', 'safety2024general', 'safety2024coal', 'dispatch-basic', 'dispatch-wind', 'dispatch-pv', 'dispatch-basic-wind', 'dispatch-basic-pv', 'dispatch-all']) {
   const source = readBank(name)
   const sourcePools = examQuestionPools(source.questions)
   const plan = defaultExamPlan(sourcePools)
@@ -292,7 +292,7 @@ assert.equal(empty.run('exam.report.wrong'), 4)
 assert.equal(empty.run('exam.report.unanswered'), 4)
 
 // Every bank now exposes a usable exam setup, and only its own types appear.
-for (const id of ['exam0828', 'safetyweek2', 'safetyweek3', 'safetyweek4', 'youththeory2', 'safety2024general', 'safety2024coal', 'dispatchbasic', 'dispatchwind', 'dispatchpv', 'dispatchall']) {
+for (const id of ['exam0828', 'safetyweek2', 'safetyweek3', 'safetyweek4', 'youththeory2', 'safety2024general', 'safety2024coal', 'dispatchbasic', 'dispatchwind', 'dispatchpv', 'dispatchbasicwind', 'dispatchbasicpv', 'dispatchall']) {
   const app = createApplication()
   app.run(`selectBank('${id}')`)
   assert.match(app.app.innerHTML, /模拟考试/, `${id} dashboard is missing the exam entry`)

@@ -282,7 +282,7 @@ function regulationReferences(value) {
 }
 
 function sourceIdsForQuestion(bankId) {
-  if (['youththeory2', 'dispatchbasic', 'dispatchwind', 'dispatchpv', 'dispatchall'].includes(bankId)) return []
+  if (['youththeory2', 'dispatchbasic', 'dispatchwind', 'dispatchpv', 'dispatchbasicwind', 'dispatchbasicpv', 'dispatchall'].includes(bankId)) return []
   if (bankId === 'safety2024general') return ['general']
   if (bankId === 'safety2024coal') return ['coal']
   return ['general', 'coal']

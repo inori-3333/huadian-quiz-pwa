@@ -1,0 +1,31 @@
+{
+  "bank": "dispatchbasicpv",
+  "title": "调度业务联系资格培训题库·调度基础+光伏",
+  "sourceBanks": [
+    {
+      "id": "dispatchbasic",
+      "title": "调度业务联系资格培训题库·调度基础",
+      "questions": 1000
+    },
+    {
+      "id": "dispatchpv",
+      "title": "调度业务联系资格培训题库·光伏",
+      "questions": 300
+    }
+  ],
+  "sourceQuestions": 1300,
+  "questions": 1300,
+  "types": {
+    "single": 650,
+    "multiple": 650
+  },
+  "chapters": [
+    "调度基础",
+    "光伏专业"
+  ],
+  "exactDuplicateQuestions": 1,
+  "sourceFilesSha256": {
+    "dispatch-basic.json": "0a459933b4d00560703e6546e5cb349f8f1add6a204389878f9a8d2bbb4170e6",
+    "dispatch-pv.json": "54b6617907a4dda3fe66e49a4f58e7671451d58fc58681bb9fc9ac1dd5511c2c"
+  }
+}
